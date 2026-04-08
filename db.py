@@ -76,7 +76,13 @@ INSERT INTO site_config (clave, valor) VALUES
     ('hero_titulo',            'Tecnología que impulsa su negocio'),
     ('hero_subtitulo',         'Productos, soporte técnico y soluciones a medida'),
     ('color_primario',         '#1E4E8C'),
-    ('color_acento',           '#E67E22')
+    ('color_acento',           '#E67E22'),
+    ('smtp_host',              ''),
+    ('smtp_port',              '587'),
+    ('smtp_user',              ''),
+    ('smtp_password',          ''),
+    ('smtp_from',              ''),
+    ('notif_to',               '')
 ON CONFLICT (clave) DO NOTHING;
 """
 

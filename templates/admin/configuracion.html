@@ -51,6 +51,46 @@
 
   </div>
 
+  <!-- ── Notificaciones por correo ── -->
+  <div class="card" style="margin-top:1.5rem">
+    <div class="card-title">📧 Notificaciones por correo electrónico</div>
+    <p style="font-size:.83rem;color:#6b7280;margin-bottom:1.2rem">
+      Cuando alguien envíe el formulario de contacto, se le notificará al correo del administrador.
+      Si deja los campos vacíos, las notificaciones quedan desactivadas (los mensajes igual se guardan en el panel admin).
+    </p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+      <div class="fi">
+        <label>Servidor SMTP</label>
+        <input type="text" name="smtp_host" value="{{ cfg.smtp_host or '' }}" placeholder="smtp.gmail.com">
+      </div>
+      <div class="fi">
+        <label>Puerto SMTP</label>
+        <input type="number" name="smtp_port" value="{{ cfg.smtp_port or '587' }}" style="width:100px" placeholder="587">
+      </div>
+      <div class="fi">
+        <label>Usuario SMTP (su correo)</label>
+        <input type="email" name="smtp_user" value="{{ cfg.smtp_user or '' }}" placeholder="correo@gmail.com">
+      </div>
+      <div class="fi">
+        <label>Contraseña SMTP / App Password</label>
+        <input type="password" name="smtp_password" value="{{ cfg.smtp_password or '' }}" placeholder="••••••••••••">
+      </div>
+      <div class="fi">
+        <label>Correo destino (recibe notificaciones)</label>
+        <input type="email" name="notif_to" value="{{ cfg.notif_to or '' }}" placeholder="admin@empresa.cr">
+      </div>
+      <div class="fi">
+        <label>Remitente (aparece como "De:")</label>
+        <input type="email" name="smtp_from" value="{{ cfg.smtp_from or '' }}" placeholder="web@empresa.cr (opcional)">
+      </div>
+    </div>
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:.8rem 1rem;margin-top:.8rem;font-size:.8rem;color:#1e40af">
+      <strong>Gmail:</strong> use <code>smtp.gmail.com</code> puerto <code>587</code> y una
+      <a href="https://myaccount.google.com/apppasswords" target="_blank" style="color:#1e40af;text-decoration:underline">App Password</a>
+      (requiere 2FA activado). No use su contraseña de Gmail directamente.
+    </div>
+  </div>
+
   <div style="margin-top:1.5rem;text-align:right">
     <button type="submit" class="btn btn-primary" style="padding:12px 32px;font-size:1rem">💾 Guardar configuración</button>
   </div>

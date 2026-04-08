@@ -22,6 +22,7 @@ from admin.config_site import (get_config, set_config_bulk, get_contactos,
 from public.catalogo_pub import (get_catalogo_publico, get_producto_publico,
                                   get_categorias_publico, registrar_contacto,
                                   get_proyectos_publico)
+from notificaciones import enviar_notificacion_contacto
 
 # ── Init ──────────────────────────────────────────────────────────────────────
 init_db()
@@ -118,6 +119,8 @@ async def contacto_post(request: Request,
                         mensaje:  str = Form(...)):
     cfg = get_config()
     registrar_contacto(nombre, email, telefono, empresa, mensaje)
+    # Notificación por correo (no bloquea si falla)
+    enviar_notificacion_contacto(nombre, email, telefono, empresa, mensaje)
     return templates.TemplateResponse("public/contacto.html", {
         "request": request, "cfg": cfg, "pagina": "contacto", "enviado": True
     })

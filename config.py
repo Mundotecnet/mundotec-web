@@ -22,6 +22,15 @@ APP_HOST   = "0.0.0.0"
 APP_PORT   = 8001
 SECRET_KEY = "mw-web-secret-2026-change-in-prod"
 
+# ── Correo SMTP (notificaciones de contacto) ──────────────────────────────────
+# Dejar vacío para deshabilitar notificaciones por correo
+SMTP_HOST     = os.getenv("SMTP_HOST",     "")          # ej: smtp.gmail.com
+SMTP_PORT     = int(os.getenv("SMTP_PORT", "587"))      # 587=TLS, 465=SSL
+SMTP_USER     = os.getenv("SMTP_USER",     "")          # tu correo
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")          # contraseña / app password
+SMTP_FROM     = os.getenv("SMTP_FROM",     "")          # remitente (puede ser = SMTP_USER)
+NOTIF_TO      = os.getenv("NOTIF_TO",      "")          # correo destino del admin
+
 # ── Rutas de archivos ─────────────────────────────────────────────────────────
 BASE_DIR          = os.path.dirname(__file__)
 UPLOAD_PRODUCTOS  = os.path.join(BASE_DIR, "static", "uploads", "productos")
