@@ -190,6 +190,26 @@ server {
 
 ## BITÁCORA DE CAMBIOS
 
+### [SESIÓN 3] — 2026-04-07 — Carrito de cotización + precios con IVA
+
+| # | Tipo | Descripción |
+|---|------|-------------|
+| 1 | Nuevo | Carrito de cotización en localStorage (`mw_carrito`) — persistente sin login |
+| 2 | Nuevo | Página `/carrito` con tabla de items, control de cantidades, desglose IVA y total |
+| 3 | Nuevo | Modal "Solicitar cotización" → POST `/carrito/cotizar` → BD + email |
+| 4 | Nuevo | Tabla `cotizaciones` en PostgreSQL (items como JSON, totales, IVA %) |
+| 5 | Nuevo | Admin `/admin/cotizaciones` — lista expandible con detalle de items |
+| 6 | Nuevo | Email de notificación con tabla de productos y totales al recibir cotización |
+| 7 | Mejora | Precios con IVA incluido en catálogo y ficha de producto |
+| 8 | Mejora | IVA configurable desde `/admin/configuracion` (default 13%) |
+| 9 | Mejora | Botón "Agregar al carrito" en tarjetas del catálogo y ficha de producto |
+| 10 | Mejora | Ícono 🛒 en nav con contador de items en tiempo real |
+| 11 | Mejora | Toast de confirmación al agregar producto al carrito |
+| 12 | Mejora | Botón WhatsApp en ficha con texto pre-llenado del producto |
+| 13 | Mejora | Link "Consultar por producto" en formulario de contacto |
+
+---
+
 ### [SESIÓN 2] — 2026-04-07 — Notificaciones por email + formulario de contacto
 
 | # | Tipo | Descripción |
