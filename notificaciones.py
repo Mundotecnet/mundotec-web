@@ -13,9 +13,13 @@ def _get_smtp_cfg() -> dict:
     """Lee la configuración SMTP desde site_config en la BD."""
     try:
         from db import query
-        rows = query("SELECT clave, valor FROM site_config WHERE clave LIKE 'smtp_%' OR clave = 'notif_to'")
-        return {r["clave"]: r["valor"] for r in rows}
+        # Seleccionar todas las claves y filtrar en Python para evitar
+        # conflicto del % en LIKE con el driver psycopg2
+        rows = query("SELECT clave, valor FROM site_config")
+        return {r["clave"]: r["valor"] for r in rows
+                if r["clave"].startswith("smtp_") or r["clave"] == "notif_to"}
     except Exception:
+        import traceback; traceback.print_exc()
         return {}
 
 
