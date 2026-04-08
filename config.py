@@ -9,11 +9,12 @@ PG_PASSWORD = os.getenv("PG_PASSWORD", "Mw@Web2026!")
 
 # ── Conexión SQL Server Syma (solo para importar productos) ────────────────────
 SYMA_DSN = (
-    "DRIVER={ODBC Driver 17 for SQL Server};"
-    "SERVER=192.168.88.250;"
-    "UID=sa;"
-    "PWD=87060002;"
-    "TrustServerCertificate=yes"
+    r"DRIVER={ODBC Driver 17 for SQL Server};"
+    r"SERVER=192.168.10.15\SQLEXPRESS;"
+    r"DATABASE=Syma;"
+    r"UID=sa;"
+    r"PWD=sqladmin;"
+    r"TrustServerCertificate=yes"
 )
 
 # ── App ───────────────────────────────────────────────────────────────────────
