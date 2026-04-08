@@ -1,0 +1,117 @@
+{% extends "public/base.html" %}
+{% block title %}Contacto{% endblock %}
+{% block head %}
+<style>
+.page-hero { background:linear-gradient(135deg,var(--dark),var(--primary)); padding:4rem 5%; color:#fff; }
+.page-hero h1 { font-size:2.2rem; font-weight:800; }
+.page-hero p  { color:rgba(255,255,255,.75); margin-top:.5rem; }
+.contacto-layout { display:grid; grid-template-columns:1fr 1.4fr; gap:4rem; padding:4rem 5%; }
+.info-item { display:flex; gap:1rem; align-items:flex-start; margin-bottom:1.8rem; }
+.info-icon { font-size:1.5rem; flex-shrink:0; }
+.info-label { font-size:.8rem; color:var(--gray); font-weight:500; }
+.info-val   { font-size:1rem; font-weight:600; color:var(--dark); }
+.form-card  { background:#fff; border-radius:16px; box-shadow:0 4px 24px rgba(0,0,0,.08); padding:2.5rem; }
+.form-card h2 { font-size:1.4rem; font-weight:800; margin-bottom:1.5rem; }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+.fi { display:flex; flex-direction:column; gap:.4rem; margin-bottom:1rem; }
+.fi label { font-size:.82rem; font-weight:600; color:var(--dark); }
+.fi input, .fi textarea, .fi select {
+  padding:10px 14px; border:1.5px solid #d1d5db; border-radius:8px;
+  font-size:.92rem; font-family:inherit; outline:none; transition:.2s;
+}
+.fi input:focus, .fi textarea:focus { border-color:var(--primary); box-shadow:0 0 0 3px rgba(30,78,140,.1); }
+.fi textarea { resize:vertical; min-height:120px; }
+.submit-btn { width:100%; padding:13px; background:var(--accent); color:#fff; border:none; border-radius:8px; font-size:1rem; font-weight:700; cursor:pointer; transition:.2s; }
+.submit-btn:hover { background:#cf6d17; }
+.success-card { background:#ecfdf5; border:1.5px solid #10b981; border-radius:12px; padding:2rem; text-align:center; }
+.success-card .icon { font-size:3rem; margin-bottom:.8rem; }
+.success-card h3 { color:#065f46; font-size:1.2rem; margin-bottom:.5rem; }
+.success-card p  { color:#047857; font-size:.9rem; }
+
+@media(max-width:800px) {
+  .contacto-layout { grid-template-columns:1fr; }
+  .form-row { grid-template-columns:1fr; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+  <h1>📬 Contáctenos</h1>
+  <p>Estamos listos para atenderle</p>
+</div>
+
+<div class="contacto-layout container">
+  <!-- Info de contacto -->
+  <div>
+    <h2 style="font-size:1.6rem;font-weight:800;margin-bottom:1.5rem">¿Cómo podemos ayudarle?</h2>
+    <p style="color:var(--gray);line-height:1.8;margin-bottom:2rem">Comuníquese con nosotros a través del formulario o por cualquiera de nuestros canales de atención. Respondemos en horario hábil.</p>
+
+    {% if cfg.empresa_telefono %}
+    <div class="info-item">
+      <div class="info-icon">📞</div>
+      <div><div class="info-label">Teléfono</div><div class="info-val">{{ cfg.empresa_telefono }}</div></div>
+    </div>
+    {% endif %}
+    {% if cfg.empresa_whatsapp %}
+    <div class="info-item">
+      <div class="info-icon">💬</div>
+      <div><div class="info-label">WhatsApp</div><div class="info-val"><a href="https://wa.me/{{ cfg.empresa_whatsapp }}" target="_blank" style="color:var(--primary)">{{ cfg.empresa_whatsapp }}</a></div></div>
+    </div>
+    {% endif %}
+    {% if cfg.empresa_email %}
+    <div class="info-item">
+      <div class="info-icon">✉️</div>
+      <div><div class="info-label">Correo electrónico</div><div class="info-val"><a href="mailto:{{ cfg.empresa_email }}" style="color:var(--primary)">{{ cfg.empresa_email }}</a></div></div>
+    </div>
+    {% endif %}
+    {% if cfg.empresa_direccion %}
+    <div class="info-item">
+      <div class="info-icon">📍</div>
+      <div><div class="info-label">Dirección</div><div class="info-val">{{ cfg.empresa_direccion }}</div></div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Formulario -->
+  <div class="form-card">
+    {% if enviado %}
+    <div class="success-card">
+      <div class="icon">✅</div>
+      <h3>¡Mensaje enviado!</h3>
+      <p>Gracias por contactarnos. Le responderemos a la brevedad posible.</p>
+      <a href="/contacto" class="btn btn-primary" style="display:inline-block;margin-top:1.2rem">Enviar otro mensaje</a>
+    </div>
+    {% else %}
+    <h2>Envíenos un mensaje</h2>
+    <form method="post" action="/contacto">
+      <div class="form-row">
+        <div class="fi">
+          <label>Nombre *</label>
+          <input type="text" name="nombre" required placeholder="Su nombre completo">
+        </div>
+        <div class="fi">
+          <label>Empresa</label>
+          <input type="text" name="empresa" placeholder="Nombre de su empresa">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="fi">
+          <label>Teléfono</label>
+          <input type="tel" name="telefono" placeholder="Ej: 8888-8888">
+        </div>
+        <div class="fi">
+          <label>Correo electrónico</label>
+          <input type="email" name="email" placeholder="correo@ejemplo.com">
+        </div>
+      </div>
+      <div class="fi">
+        <label>Mensaje *</label>
+        <textarea name="mensaje" required placeholder="¿En qué podemos ayudarle?"></textarea>
+      </div>
+      <button type="submit" class="submit-btn">Enviar mensaje →</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

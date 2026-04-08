@@ -1,0 +1,56 @@
+{% extends "admin/base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block topbar_title %}🏠 Dashboard{% endblock %}
+{% block content %}
+
+<div class="stats-grid">
+  <div class="stat-card" style="border-color:#1E4E8C">
+    <div class="num">{{ stats_cat.total }}</div>
+    <div class="lbl">📦 Productos en catálogo</div>
+  </div>
+  <div class="stat-card" style="border-color:#27ae60">
+    <div class="num">{{ stats_cat.activos }}</div>
+    <div class="lbl">✅ Productos activos</div>
+  </div>
+  <div class="stat-card" style="border-color:#E67E22">
+    <div class="num">{{ stats_pry.total }}</div>
+    <div class="lbl">🏗️ Proyectos</div>
+  </div>
+  <div class="stat-card" style="border-color:{% if stats_cnt.no_leidos > 0 %}#ef4444{% else %}#6b7280{% endif %}">
+    <div class="num">{{ stats_cnt.no_leidos }}</div>
+    <div class="lbl">📬 Mensajes no leídos</div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+  <div class="card">
+    <div class="card-title">📦 Acciones rápidas — Catálogo</div>
+    <div style="display:flex;flex-direction:column;gap:.7rem">
+      <a href="/admin/catalogo" class="btn btn-primary">Ver todos los productos</a>
+      <a href="/admin/catalogo/importar-syma" class="btn btn-outline">⬇ Importar desde SYMA</a>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">⚡ Acciones rápidas — General</div>
+    <div style="display:flex;flex-direction:column;gap:.7rem">
+      <a href="/admin/proyectos"     class="btn btn-primary">🏗️ Gestionar proyectos</a>
+      <a href="/admin/contacto"      class="btn btn-outline {% if stats_cnt.no_leidos > 0 %}btn-accent{% endif %}">
+        📬 Ver mensajes {% if stats_cnt.no_leidos > 0 %}<span class="badge badge-red" style="margin-left:.3rem">{{ stats_cnt.no_leidos }}</span>{% endif %}
+      </a>
+      <a href="/admin/configuracion" class="btn btn-ghost">⚙️ Configurar sitio</a>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:0">
+  <div class="card-title">🌐 Vista previa del sitio</div>
+  <p style="font-size:.88rem;color:#6b7280;margin-bottom:1rem">El sitio web público está disponible en la red interna:</p>
+  <div style="display:flex;gap:1rem;flex-wrap:wrap">
+    <a href="/" target="_blank" class="btn btn-outline">🏠 Inicio</a>
+    <a href="/catalogo" target="_blank" class="btn btn-outline">📦 Catálogo</a>
+    <a href="/proyectos" target="_blank" class="btn btn-outline">🏗️ Proyectos</a>
+    <a href="/contacto" target="_blank" class="btn btn-outline">📬 Contacto</a>
+  </div>
+</div>
+
+{% endblock %}

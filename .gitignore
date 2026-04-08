@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.env
+static/uploads/productos/*
+static/uploads/proyectos/*
+!static/uploads/productos/.gitkeep
+!static/uploads/proyectos/.gitkeep
+*.log

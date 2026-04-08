@@ -1,0 +1,143 @@
+{% extends "admin/base.html" %}
+{% block title %}Proyectos{% endblock %}
+{% block topbar_title %}🏗️ Proyectos{% endblock %}
+{% block head %}
+<style>
+.pry-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:1.2rem; }
+.pc { background:#fff; border-radius:10px; box-shadow:0 1px 8px rgba(0,0,0,.07); overflow:hidden; }
+.pc-img { height:160px; background:#1a2a4a; display:flex; align-items:center; justify-content:center; font-size:2.5rem; overflow:hidden; position:relative; }
+.pc-img img { width:100%; height:100%; object-fit:cover; }
+.pc-body { padding:1rem; }
+.pc-footer { padding:.7rem 1rem; border-top:1px solid #f0f0f0; display:flex; gap:.5rem; align-items:center; }
+.modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:999; align-items:center; justify-content:center; }
+.modal.open { display:flex; }
+.modal-box { background:#fff; border-radius:14px; padding:2rem; width:100%; max-width:540px; max-height:90vh; overflow-y:auto; }
+.modal-box h3 { margin-bottom:1.2rem; }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:.8rem; }
+</style>
+{% endblock %}
+{% block topbar_actions %}
+  <button onclick="document.getElementById('modalNuevo').classList.add('open')" class="btn btn-accent btn-sm">➕ Nuevo proyecto</button>
+{% endblock %}
+{% block content %}
+
+{% if proyectos %}
+<div class="pry-grid">
+  {% for p in proyectos %}
+  <div class="pc">
+    <div class="pc-img" id="pimg-{{ p.id }}">
+      {% if p.imagen_path %}<img src="{{ p.imagen_path }}" alt="{{ p.titulo }}">{% else %}🏗️{% endif %}
+    </div>
+    <div class="pc-body">
+      {% if p.categoria %}<div style="font-size:.7rem;font-weight:700;color:#E67E22;text-transform:uppercase;margin-bottom:.3rem">{{ p.categoria }}</div>{% endif %}
+      <div style="font-size:.92rem;font-weight:700;margin-bottom:.3rem">{{ p.titulo }}</div>
+      {% if p.descripcion %}<div style="font-size:.8rem;color:#6b7280;line-height:1.5">{{ p.descripcion[:80] }}{% if p.descripcion|length > 80 %}…{% endif %}</div>{% endif %}
+    </div>
+    <div class="pc-footer">
+      <span class="badge {{ 'badge-green' if p.activo else 'badge-red' }}">{{ 'Activo' if p.activo else 'Inactivo' }}</span>
+      <div style="margin-left:auto;display:flex;gap:.4rem">
+        <label class="btn btn-ghost btn-sm" style="cursor:pointer">
+          📷
+          <input type="file" accept="image/*" style="display:none" onchange="subirImgProy({{ p.id }}, this)">
+        </label>
+        <button onclick="editarProy({{ p.id }}, {{ p | tojson }})" class="btn btn-primary btn-sm">✏️</button>
+        <button onclick="eliminarProy({{ p.id }})" class="btn btn-danger btn-sm">🗑</button>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card" style="text-align:center;padding:4rem;color:#9ca3af">
+  <p style="font-size:2rem;margin-bottom:.5rem">🏗️</p>
+  <p>No hay proyectos. Cree el primero haciendo clic en "Nuevo proyecto".</p>
+</div>
+{% endif %}
+
+<!-- Modal Nuevo -->
+<div class="modal" id="modalNuevo">
+  <div class="modal-box">
+    <h3>➕ Nuevo proyecto</h3>
+    <div class="fi"><label>Título *</label><input type="text" id="n-titulo" placeholder="Nombre del proyecto"></div>
+    <div class="form-row">
+      <div class="fi"><label>Categoría</label><input type="text" id="n-categoria" placeholder="Ej: Redes, Cómputo..."></div>
+      <div class="fi"><label>Fecha</label><input type="date" id="n-fecha"></div>
+    </div>
+    <div class="fi"><label>Descripción</label><textarea id="n-desc" rows="4" placeholder="Breve descripción del proyecto..."></textarea></div>
+    <div style="display:flex;gap:.8rem;justify-content:flex-end;margin-top:1rem">
+      <button onclick="document.getElementById('modalNuevo').classList.remove('open')" class="btn btn-ghost">Cancelar</button>
+      <button onclick="crearProy()" class="btn btn-accent">Crear proyecto</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Editar -->
+<div class="modal" id="modalEditar">
+  <div class="modal-box">
+    <h3>✏️ Editar proyecto</h3>
+    <input type="hidden" id="e-id">
+    <div class="fi"><label>Título *</label><input type="text" id="e-titulo"></div>
+    <div class="form-row">
+      <div class="fi"><label>Categoría</label><input type="text" id="e-categoria"></div>
+      <div class="fi"><label>Fecha</label><input type="date" id="e-fecha"></div>
+    </div>
+    <div class="fi"><label>Descripción</label><textarea id="e-desc" rows="4"></textarea></div>
+    <div style="display:flex;gap:.8rem;align-items:center;margin-bottom:.5rem">
+      <label style="display:flex;align-items:center;gap:.5rem;font-size:.88rem;cursor:pointer">
+        <label class="toggle"><input type="checkbox" id="e-activo"><span class="slider"></span></label> Activo
+      </label>
+      <label style="display:flex;align-items:center;gap:.5rem;font-size:.88rem;cursor:pointer">
+        <label class="toggle"><input type="checkbox" id="e-destacado"><span class="slider"></span></label> Destacado
+      </label>
+      <div class="fi" style="margin:0;flex:1"><label style="margin-bottom:.2rem">Orden</label><input type="number" id="e-orden" min="0" style="width:80px"></div>
+    </div>
+    <div style="display:flex;gap:.8rem;justify-content:flex-end;margin-top:1rem">
+      <button onclick="document.getElementById('modalEditar').classList.remove('open')" class="btn btn-ghost">Cancelar</button>
+      <button onclick="guardarProy()" class="btn btn-primary">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+async function crearProy() {
+  const data = { titulo: document.getElementById('n-titulo').value, descripcion: document.getElementById('n-desc').value, categoria: document.getElementById('n-categoria').value, fecha: document.getElementById('n-fecha').value || null };
+  if (!data.titulo) { alert('El título es requerido.'); return; }
+  await fetch('/admin/proyectos/crear', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+  location.reload();
+}
+
+function editarProy(id, p) {
+  document.getElementById('e-id').value        = id;
+  document.getElementById('e-titulo').value    = p.titulo;
+  document.getElementById('e-desc').value      = p.descripcion || '';
+  document.getElementById('e-categoria').value = p.categoria || '';
+  document.getElementById('e-fecha').value     = p.fecha || '';
+  document.getElementById('e-activo').checked  = p.activo;
+  document.getElementById('e-destacado').checked = p.destacado;
+  document.getElementById('e-orden').value     = p.orden || 0;
+  document.getElementById('modalEditar').classList.add('open');
+}
+
+async function guardarProy() {
+  const id   = document.getElementById('e-id').value;
+  const data = { titulo: document.getElementById('e-titulo').value, descripcion: document.getElementById('e-desc').value, categoria: document.getElementById('e-categoria').value, fecha: document.getElementById('e-fecha').value || null, activo: document.getElementById('e-activo').checked, destacado: document.getElementById('e-destacado').checked, orden: parseInt(document.getElementById('e-orden').value) || 0 };
+  await fetch(`/admin/proyectos/${id}/guardar`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+  location.reload();
+}
+
+async function eliminarProy(id) {
+  if (!confirm('¿Eliminar este proyecto?')) return;
+  await fetch(`/admin/proyectos/${id}`, { method:'DELETE' });
+  location.reload();
+}
+
+async function subirImgProy(id, input) {
+  const fd = new FormData(); fd.append('imagen', input.files[0]);
+  const r  = await fetch(`/admin/proyectos/${id}/imagen`, { method:'POST', body:fd });
+  if (r.ok) { const d=await r.json(); const el=document.getElementById(`pimg-${id}`); el.innerHTML=`<img src="${d.imagen_path}" alt="" style="width:100%;height:100%;object-fit:cover">`; }
+}
+
+// Cerrar modales al hacer clic fuera
+document.querySelectorAll('.modal').forEach(m => m.addEventListener('click', e => { if (e.target===m) m.classList.remove('open'); }));
+</script>
+{% endblock %}

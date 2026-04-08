@@ -1,0 +1,58 @@
+from db import query, execute
+
+def get_catalogo_publico(categoria="", busqueda="", destacado=False) -> list:
+    filtros = ["p.activo = TRUE"]
+    params  = []
+    if destacado:
+        filtros.append("p.destacado = TRUE")
+    if categoria:
+        filtros.append("p.categoria ILIKE %s"); params.append(f"%{categoria}%")
+    if busqueda:
+        filtros.append("(p.nombre ILIKE %s OR p.descripcion_web ILIKE %s)")
+        params += [f"%{busqueda}%", f"%{busqueda}%"]
+    where = "WHERE " + " AND ".join(filtros)
+    prods = query(f"""
+        SELECT p.*,
+               i.url_path AS imagen_principal
+        FROM catalogo_productos p
+        LEFT JOIN catalogo_imagenes i ON i.producto_id=p.id AND i.es_principal=TRUE
+        {where}
+        ORDER BY p.orden, p.nombre
+    """, params)
+    return prods
+
+
+def get_producto_publico(prod_id: int) -> dict:
+    p = query("SELECT * FROM catalogo_productos WHERE id=%s AND activo=TRUE",
+              (prod_id,), many=False)
+    if not p:
+        return None
+    p["imagenes"] = query("SELECT * FROM catalogo_imagenes WHERE producto_id=%s ORDER BY orden, es_principal DESC", (prod_id,))
+    p["specs"]    = query("SELECT * FROM catalogo_specs    WHERE producto_id=%s ORDER BY orden", (prod_id,))
+    return p
+
+
+def get_categorias_publico() -> list:
+    rows = query("""
+        SELECT DISTINCT categoria FROM catalogo_productos
+        WHERE activo=TRUE AND categoria IS NOT NULL AND categoria <> ''
+        ORDER BY categoria
+    """)
+    return [r["categoria"] for r in rows]
+
+
+def registrar_contacto(nombre, email, telefono, empresa, mensaje) -> dict:
+    return execute("""
+        INSERT INTO contacto (nombre, email, telefono, empresa, mensaje)
+        VALUES (%s,%s,%s,%s,%s) RETURNING id
+    """, (nombre, email or None, telefono or None, empresa or None, mensaje),
+         returning=True)
+
+
+def get_proyectos_publico(categoria="") -> list:
+    filtros = ["activo=TRUE"]
+    params  = []
+    if categoria:
+        filtros.append("categoria ILIKE %s"); params.append(f"%{categoria}%")
+    where = "WHERE " + " AND ".join(filtros)
+    return query(f"SELECT * FROM proyectos {where} ORDER BY orden, fecha DESC NULLS LAST", params)

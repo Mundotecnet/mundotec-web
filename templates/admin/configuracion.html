@@ -1,0 +1,59 @@
+{% extends "admin/base.html" %}
+{% block title %}Configuración{% endblock %}
+{% block topbar_title %}⚙️ Configuración del sitio{% endblock %}
+{% block content %}
+
+{% if guardado %}<div class="alert alert-success">✅ Configuración guardada correctamente.</div>{% endif %}
+
+<form method="post" action="/admin/configuracion">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+
+    <div class="card">
+      <div class="card-title">🏢 Datos de la empresa</div>
+      <div class="fi"><label>Nombre de la empresa</label><input type="text" name="empresa_nombre" value="{{ cfg.empresa_nombre or '' }}"></div>
+      <div class="fi"><label>Slogan</label><input type="text" name="empresa_slogan" value="{{ cfg.empresa_slogan or '' }}" placeholder="Ej: Soluciones tecnológicas..."></div>
+      <div class="fi"><label>Descripción (aparece en pie de página y Nosotros)</label><textarea name="empresa_descripcion" rows="3">{{ cfg.empresa_descripcion or '' }}</textarea></div>
+      <div class="fi"><label>Año de fundación</label><input type="number" name="empresa_anio_fundacion" value="{{ cfg.empresa_anio_fundacion or '2010' }}" style="width:120px"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📞 Datos de contacto</div>
+      <div class="fi"><label>Teléfono</label><input type="text" name="empresa_telefono" value="{{ cfg.empresa_telefono or '' }}" placeholder="Ej: 2222-3333"></div>
+      <div class="fi"><label>WhatsApp (solo número, sin guiones)</label><input type="text" name="empresa_whatsapp" value="{{ cfg.empresa_whatsapp or '' }}" placeholder="Ej: 50688889999"></div>
+      <div class="fi"><label>Correo electrónico</label><input type="email" name="empresa_email" value="{{ cfg.empresa_email or '' }}" placeholder="info@empresa.cr"></div>
+      <div class="fi"><label>Dirección</label><input type="text" name="empresa_direccion" value="{{ cfg.empresa_direccion or '' }}" placeholder="Ej: San José, Costa Rica"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🎨 Textos del hero (página principal)</div>
+      <div class="fi"><label>Título principal</label><input type="text" name="hero_titulo" value="{{ cfg.hero_titulo or '' }}"></div>
+      <div class="fi"><label>Subtítulo</label><input type="text" name="hero_subtitulo" value="{{ cfg.hero_subtitulo or '' }}"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🎨 Colores corporativos</div>
+      <div class="fi">
+        <label>Color primario</label>
+        <div style="display:flex;gap:.8rem;align-items:center">
+          <input type="color" name="color_primario" value="{{ cfg.color_primario or '#1E4E8C' }}" style="width:60px;height:40px;padding:2px;border:1.5px solid #d1d5db;border-radius:8px">
+          <input type="text" value="{{ cfg.color_primario or '#1E4E8C' }}" style="width:120px;font-family:monospace" oninput="this.previousElementSibling.value=this.value" onchange="document.querySelector('[name=color_primario]').value=this.value">
+        </div>
+      </div>
+      <div class="fi">
+        <label>Color acento</label>
+        <div style="display:flex;gap:.8rem;align-items:center">
+          <input type="color" name="color_acento" value="{{ cfg.color_acento or '#E67E22' }}" style="width:60px;height:40px;padding:2px;border:1.5px solid #d1d5db;border-radius:8px">
+          <input type="text" value="{{ cfg.color_acento or '#E67E22' }}" style="width:120px;font-family:monospace" oninput="this.previousElementSibling.value=this.value" onchange="document.querySelector('[name=color_acento]').value=this.value">
+        </div>
+      </div>
+      <p style="font-size:.78rem;color:#9ca3af;margin-top:.5rem">Los colores se aplican en toda la navegación del sitio.</p>
+    </div>
+
+  </div>
+
+  <div style="margin-top:1.5rem;text-align:right">
+    <button type="submit" class="btn btn-primary" style="padding:12px 32px;font-size:1rem">💾 Guardar configuración</button>
+  </div>
+</form>
+
+{% endblock %}

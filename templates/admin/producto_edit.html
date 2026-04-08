@@ -1,0 +1,232 @@
+{% extends "admin/base.html" %}
+{% block title %}Editar {{ p.nombre }}{% endblock %}
+{% block topbar_title %}✏️ Editar producto{% endblock %}
+{% block topbar_actions %}
+  <a href="/admin/catalogo/{{ p.id }}" target="_blank" class="btn btn-ghost btn-sm">👁 Vista admin</a>
+  <a href="/catalogo/{{ p.id }}" target="_blank" class="btn btn-ghost btn-sm">🌐 Ver en sitio</a>
+  <a href="/admin/catalogo" class="btn btn-outline btn-sm">← Volver</a>
+{% endblock %}
+{% block head %}
+<style>
+.edit-layout { display:grid; grid-template-columns:1.2fr 1fr; gap:1.5rem; }
+.img-grid { display:flex; flex-wrap:wrap; gap:.6rem; margin-top:.8rem; }
+.img-thumb { position:relative; width:100px; height:100px; border-radius:8px; overflow:hidden; border:2px solid #e5e7eb; }
+.img-thumb img { width:100%; height:100%; object-fit:cover; }
+.img-thumb .overlay { position:absolute; inset:0; background:rgba(0,0,0,.5); display:none; align-items:center; justify-content:center; gap:.3rem; flex-direction:column; }
+.img-thumb:hover .overlay { display:flex; }
+.overlay-btn { background:rgba(255,255,255,.9); border:none; border-radius:5px; padding:3px 7px; font-size:.72rem; cursor:pointer; width:80%; text-align:center; }
+.img-principal-badge { position:absolute; top:4px; left:4px; background:#E67E22; color:#fff; font-size:.62rem; padding:2px 5px; border-radius:4px; font-weight:700; }
+.specs-row { display:flex; gap:.5rem; align-items:center; margin-bottom:.5rem; }
+.specs-row input { flex:1; padding:7px 10px; border:1.5px solid #d1d5db; border-radius:7px; font-size:.85rem; }
+.specs-row button { padding:6px 10px; border:none; background:#fee2e2; color:#dc2626; border-radius:7px; cursor:pointer; }
+.drop-zone { border:2px dashed #d1d5db; border-radius:10px; padding:2rem; text-align:center; cursor:pointer; background:#f9fafb; transition:.15s; }
+.drop-zone:hover { border-color:var(--primary); background:#eff6ff; }
+.drop-zone input { display:none; }
+.tab-btns { display:flex; border-bottom:2px solid #e5e7eb; margin-bottom:1.2rem; gap:0; }
+.tab-btn { padding:.6rem 1.2rem; border:none; background:transparent; cursor:pointer; font-size:.88rem; font-weight:600; color:#6b7280; border-bottom:2px solid transparent; margin-bottom:-2px; }
+.tab-btn.activo { color:var(--primary); border-bottom-color:var(--primary); }
+.tab-panel { display:none; }
+.tab-panel.activo { display:block; }
+</style>
+{% endblock %}
+{% block content %}
+
+<div class="edit-layout">
+
+  <!-- Columna izquierda: info principal -->
+  <div>
+    <!-- Info general -->
+    <div class="card">
+      <div class="card-title">📝 Información general</div>
+      <div class="fi"><label>Código SYMA</label><input type="text" value="{{ p.codigo }}" disabled style="background:#f3f4f6;color:#6b7280"></div>
+      <div class="fi"><label>Nombre del producto</label><input type="text" id="f-nombre" value="{{ p.nombre }}"></div>
+      <div class="fi"><label>Categoría</label><input type="text" id="f-categoria" value="{{ p.categoria or '' }}" placeholder="Ej: Redes, Cómputo, Impresoras..."></div>
+      <div class="fi"><label>Precio referencia (₡, opcional)</label><input type="number" id="f-precio" value="{{ p.precio_ref or '' }}" min="0" step="1"></div>
+      <div style="display:flex;gap:1.5rem;margin-bottom:1rem;align-items:center">
+        <label style="display:flex;align-items:center;gap:.5rem;font-size:.88rem;font-weight:600;cursor:pointer">
+          <label class="toggle"><input type="checkbox" id="f-activo" {{ 'checked' if p.activo }}><span class="slider"></span></label>
+          Producto activo
+        </label>
+        <label style="display:flex;align-items:center;gap:.5rem;font-size:.88rem;font-weight:600;cursor:pointer">
+          <label class="toggle"><input type="checkbox" id="f-destacado" {{ 'checked' if p.destacado }}><span class="slider"></span></label>
+          Destacado en inicio
+        </label>
+      </div>
+      <div class="fi"><label>Orden (menor número = primero)</label><input type="number" id="f-orden" value="{{ p.orden or 0 }}" min="0"></div>
+    </div>
+
+    <!-- Descripción web -->
+    <div class="card">
+      <div class="card-title">📖 Descripción web</div>
+      <p style="font-size:.8rem;color:#6b7280;margin-bottom:.8rem">Esta descripción aparece en el sitio público. Puede ser diferente a la descripción de SYMA.</p>
+      {% if p.descripcion_syma %}
+      <details style="margin-bottom:.8rem">
+        <summary style="font-size:.8rem;color:#6b7280;cursor:pointer">Ver descripción original de SYMA</summary>
+        <p style="font-size:.82rem;color:#374151;margin-top:.5rem;padding:.7rem;background:#f9fafb;border-radius:6px">{{ p.descripcion_syma }}</p>
+      </details>
+      {% endif %}
+      <textarea id="f-desc" rows="6" placeholder="Escriba la descripción detallada para el sitio web...">{{ p.descripcion_web or '' }}</textarea>
+    </div>
+
+    <button onclick="guardarInfo()" class="btn btn-primary" style="width:100%">💾 Guardar cambios</button>
+    <div id="save-msg" style="display:none;margin-top:.7rem;font-size:.85rem;text-align:center"></div>
+  </div>
+
+  <!-- Columna derecha: imágenes, specs, ficha -->
+  <div>
+    <div class="card">
+      <div class="tab-btns">
+        <button class="tab-btn activo" onclick="showTab('imgs',this)">🖼 Imágenes</button>
+        <button class="tab-btn"        onclick="showTab('specs',this)">📋 Specs técnicas</button>
+        <button class="tab-btn"        onclick="showTab('ficha',this)">📄 Ficha PDF</button>
+      </div>
+
+      <!-- Imágenes -->
+      <div id="tab-imgs" class="tab-panel activo">
+        <div class="drop-zone" onclick="document.getElementById('imgInput').click()" id="dropZone">
+          <input type="file" id="imgInput" accept="image/*" multiple onchange="subirImagenes(this)">
+          <p>🖼 Arrastra imágenes aquí o haz clic para seleccionar</p>
+          <p style="font-size:.78rem;color:#9ca3af;margin-top:.3rem">JPG, PNG, WEBP — puede subir varias a la vez</p>
+        </div>
+        <div class="img-grid" id="imgGrid">
+          {% for img in p.imagenes %}
+          <div class="img-thumb" id="img-{{ img.id }}">
+            <img src="{{ img.url_path }}" alt="">
+            {% if img.es_principal %}<div class="img-principal-badge">Principal</div>{% endif %}
+            <div class="overlay">
+              {% if not img.es_principal %}<button class="overlay-btn" onclick="setPrincipal({{ img.id }})">⭐ Principal</button>{% endif %}
+              <button class="overlay-btn" style="background:#fee2e2;color:#dc2626" onclick="eliminarImg({{ img.id }})">🗑 Eliminar</button>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        <p style="font-size:.75rem;color:#9ca3af;margin-top:.7rem">La imagen marcada como "Principal" aparece en el listado del catálogo.</p>
+      </div>
+
+      <!-- Especificaciones -->
+      <div id="tab-specs" class="tab-panel">
+        <p style="font-size:.82rem;color:#6b7280;margin-bottom:1rem">Agregue especificaciones técnicas del producto (Voltaje, Peso, Dimensiones, etc.)</p>
+        <div id="specs-container">
+          {% for s in p.specs %}
+          <div class="specs-row">
+            <input type="text" placeholder="Etiqueta" value="{{ s.etiqueta }}" class="spec-etiqueta">
+            <input type="text" placeholder="Valor"    value="{{ s.valor }}"    class="spec-valor">
+            <button onclick="this.parentElement.remove()">✕</button>
+          </div>
+          {% endfor %}
+        </div>
+        <button onclick="agregarSpecRow()" class="btn btn-ghost btn-sm" style="margin-bottom:1rem">➕ Agregar especificación</button>
+        <button onclick="guardarSpecs()" class="btn btn-primary" style="width:100%">💾 Guardar especificaciones</button>
+        <div id="spec-msg" style="display:none;margin-top:.5rem;font-size:.82rem;text-align:center"></div>
+      </div>
+
+      <!-- Ficha PDF -->
+      <div id="tab-ficha" class="tab-panel">
+        {% if p.ficha_path %}
+        <div style="background:#f0fdf4;border-radius:8px;padding:1rem;margin-bottom:1rem;display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:.85rem">📄 Ficha técnica cargada</span>
+          <a href="{{ p.ficha_path }}" target="_blank" class="btn btn-outline btn-sm">Ver PDF</a>
+        </div>
+        {% endif %}
+        <div class="drop-zone" onclick="document.getElementById('fichaInput').click()">
+          <input type="file" id="fichaInput" accept="application/pdf" onchange="subirFicha(this)">
+          <p>📄 Subir ficha técnica PDF</p>
+          <p style="font-size:.78rem;color:#9ca3af;margin-top:.3rem">Solo archivos PDF</p>
+        </div>
+        <div id="ficha-msg" style="display:none;margin-top:.7rem;font-size:.82rem;text-align:center"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const PROD_ID = {{ p.id }};
+
+function showTab(name, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('activo'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('activo'));
+  document.getElementById('tab-'+name).classList.add('activo');
+  btn.classList.add('activo');
+}
+
+async function guardarInfo() {
+  const data = {
+    nombre:          document.getElementById('f-nombre').value,
+    descripcion_web: document.getElementById('f-desc').value,
+    categoria:       document.getElementById('f-categoria').value,
+    precio_ref:      parseFloat(document.getElementById('f-precio').value) || null,
+    activo:          document.getElementById('f-activo').checked,
+    destacado:       document.getElementById('f-destacado').checked,
+    orden:           parseInt(document.getElementById('f-orden').value) || 0,
+  };
+  const r   = await fetch(`/admin/catalogo/${PROD_ID}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data) });
+  const msg = document.getElementById('save-msg');
+  msg.style.display = 'block';
+  if (r.ok) { msg.style.color='#166534'; msg.textContent='✅ Cambios guardados correctamente.'; }
+  else       { msg.style.color='#991b1b'; msg.textContent='❌ Error al guardar.'; }
+  setTimeout(() => msg.style.display='none', 3000);
+}
+
+// ── Imágenes ──────────────────────────────────────────────────────────────────
+async function subirImagenes(input) {
+  const files = [...input.files];
+  for (const [i, f] of files.entries()) {
+    const fd = new FormData();
+    fd.append('foto', f);
+    fd.append('principal', i === 0 && document.querySelectorAll('#imgGrid .img-thumb').length === 0);
+    const r = await fetch(`/admin/catalogo/${PROD_ID}/imagen`, { method:'POST', body:fd });
+    if (r.ok) {
+      const img = await r.json();
+      const div = document.createElement('div');
+      div.className='img-thumb'; div.id=`img-${img.id}`;
+      div.innerHTML=`<img src="${img.url_path}" alt=""><div class="overlay"><button class="overlay-btn" onclick="setPrincipal(${img.id})">⭐ Principal</button><button class="overlay-btn" style="background:#fee2e2;color:#dc2626" onclick="eliminarImg(${img.id})">🗑 Eliminar</button></div>`;
+      document.getElementById('imgGrid').appendChild(div);
+    }
+  }
+  input.value = '';
+}
+
+async function eliminarImg(id) {
+  if (!confirm('¿Eliminar esta imagen?')) return;
+  await fetch(`/admin/imagen/${id}`, { method:'DELETE' });
+  document.getElementById(`img-${id}`)?.remove();
+}
+
+async function setPrincipal(id) {
+  await fetch(`/admin/imagen/${id}/principal`, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ prod_id: PROD_ID }) });
+  location.reload();
+}
+
+// ── Specs ─────────────────────────────────────────────────────────────────────
+function agregarSpecRow() {
+  const div = document.createElement('div');
+  div.className = 'specs-row';
+  div.innerHTML = `<input type="text" placeholder="Etiqueta" class="spec-etiqueta"><input type="text" placeholder="Valor" class="spec-valor"><button onclick="this.parentElement.remove()">✕</button>`;
+  document.getElementById('specs-container').appendChild(div);
+}
+
+async function guardarSpecs() {
+  const rows  = [...document.querySelectorAll('.specs-row')];
+  const specs = rows.map(r => ({
+    etiqueta: r.querySelector('.spec-etiqueta').value.trim(),
+    valor:    r.querySelector('.spec-valor').value.trim()
+  })).filter(s => s.etiqueta && s.valor);
+  const r   = await fetch(`/admin/catalogo/${PROD_ID}/specs`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ specs }) });
+  const msg = document.getElementById('spec-msg');
+  msg.style.display='block';
+  if (r.ok) { msg.style.color='#166534'; msg.textContent='✅ Especificaciones guardadas.'; }
+  else       { msg.style.color='#991b1b'; msg.textContent='❌ Error al guardar.'; }
+  setTimeout(() => msg.style.display='none', 3000);
+}
+
+// ── Ficha PDF ─────────────────────────────────────────────────────────────────
+async function subirFicha(input) {
+  const fd = new FormData(); fd.append('ficha', input.files[0]);
+  const r  = await fetch(`/admin/catalogo/${PROD_ID}/ficha`, { method:'POST', body:fd });
+  const msg = document.getElementById('ficha-msg');
+  msg.style.display='block';
+  if (r.ok) { const d=await r.json(); msg.style.color='#166534'; msg.textContent='✅ Ficha cargada: '+d.ficha_path; }
+  else       { msg.style.color='#991b1b'; msg.textContent='❌ Error al subir el PDF.'; }
+}
+</script>
+{% endblock %}

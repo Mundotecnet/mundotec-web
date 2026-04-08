@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Admin Login — MUNDOTEC</title>
+  <style>
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Segoe UI',system-ui,sans-serif; background:linear-gradient(135deg,#0d1b2a,#1E4E8C); min-height:100vh; display:flex; align-items:center; justify-content:center; }
+    .card { background:#fff; border-radius:16px; padding:2.5rem; width:100%; max-width:380px; box-shadow:0 20px 60px rgba(0,0,0,.3); }
+    .brand { text-align:center; margin-bottom:2rem; }
+    .brand .logo { font-size:1.6rem; font-weight:800; color:#0d1b2a; }
+    .brand .logo span { color:#E67E22; }
+    .brand .sub { font-size:.8rem; color:#6b7280; margin-top:.3rem; }
+    .fi { display:flex; flex-direction:column; gap:.4rem; margin-bottom:1rem; }
+    .fi label { font-size:.82rem; font-weight:600; color:#374151; }
+    .fi input { padding:10px 14px; border:1.5px solid #d1d5db; border-radius:8px; font-size:.92rem; outline:none; transition:.15s; }
+    .fi input:focus { border-color:#1E4E8C; }
+    .btn { width:100%; padding:12px; background:#1E4E8C; color:#fff; border:none; border-radius:8px; font-size:1rem; font-weight:700; cursor:pointer; margin-top:.5rem; }
+    .btn:hover { background:#163d6e; }
+    .error { background:#fee2e2; color:#991b1b; border-radius:8px; padding:.8rem 1rem; font-size:.85rem; margin-bottom:1rem; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="brand">
+      <div class="logo">MUNDO<span>TEC</span></div>
+      <div class="sub">Panel de administración web</div>
+    </div>
+    {% if error %}<div class="error">⚠ {{ error }}</div>{% endif %}
+    <form method="post" action="/admin/login">
+      <div class="fi"><label>Usuario</label><input type="text" name="usuario" autofocus required></div>
+      <div class="fi"><label>Contraseña</label><input type="password" name="clave" required></div>
+      <button type="submit" class="btn">Ingresar →</button>
+    </form>
+  </div>
+</body>
+</html>

@@ -1,0 +1,69 @@
+{% extends "admin/base.html" %}
+{% block title %}Contacto{% endblock %}
+{% block topbar_title %}📬 Mensajes de contacto{% endblock %}
+{% block content %}
+
+<div class="stats-grid" style="margin-bottom:1.5rem">
+  <div class="stat-card" style="border-color:#1E4E8C"><div class="num">{{ stats.total }}</div><div class="lbl">Total mensajes</div></div>
+  <div class="stat-card" style="border-color:{{ '#ef4444' if stats.no_leidos > 0 else '#6b7280' }}"><div class="num">{{ stats.no_leidos }}</div><div class="lbl">No leídos</div></div>
+</div>
+
+<div style="display:flex;gap:.6rem;margin-bottom:1rem">
+  <a href="/admin/contacto"       class="btn btn-sm {{ 'btn-primary' if not filtro }}">Todos</a>
+  <a href="/admin/contacto?leido=no" class="btn btn-sm {{ 'btn-primary' if filtro=='no' else 'btn-ghost' }}">No leídos</a>
+  <a href="/admin/contacto?leido=si" class="btn btn-sm {{ 'btn-primary' if filtro=='si' else 'btn-ghost' }}">Leídos</a>
+</div>
+
+<div class="card" style="padding:0;overflow:hidden">
+  {% if mensajes %}
+  <table class="tbl">
+    <thead>
+      <tr>
+        <th style="width:30px"></th>
+        <th>Nombre</th>
+        <th>Empresa</th>
+        <th>Teléfono / Email</th>
+        <th>Mensaje</th>
+        <th>Fecha</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for m in mensajes %}
+      <tr style="{{ 'font-weight:600;' if not m.leido }}" id="msg-{{ m.id }}">
+        <td style="text-align:center">{{ '🔵' if not m.leido else '⚪' }}</td>
+        <td>{{ m.nombre }}</td>
+        <td style="font-size:.82rem;color:#6b7280">{{ m.empresa or '—' }}</td>
+        <td style="font-size:.8rem">
+          {% if m.telefono %}<div>📞 {{ m.telefono }}</div>{% endif %}
+          {% if m.email    %}<div><a href="mailto:{{ m.email }}">✉ {{ m.email }}</a></div>{% endif %}
+        </td>
+        <td style="max-width:280px;font-size:.85rem;color:#374151">
+          <span title="{{ m.mensaje }}">{{ m.mensaje[:100] }}{% if m.mensaje|length > 100 %}…{% endif %}</span>
+        </td>
+        <td style="font-size:.78rem;color:#9ca3af;white-space:nowrap">{{ m.creado_en.strftime('%d/%m/%Y %H:%M') if m.creado_en else '' }}</td>
+        <td>
+          {% if not m.leido %}
+          <button onclick="marcarLeido({{ m.id }})" class="btn btn-ghost btn-sm">✅ Leído</button>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div style="text-align:center;padding:4rem;color:#9ca3af">
+    <p style="font-size:2rem;margin-bottom:.5rem">📭</p>
+    <p>No hay mensajes{% if filtro %} con este filtro{% endif %}.</p>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+async function marcarLeido(id) {
+  await fetch(`/admin/contacto/${id}/leido`, { method:'POST' });
+  const row = document.getElementById(`msg-${id}`);
+  if (row) { row.style.fontWeight='normal'; row.cells[0].textContent='⚪'; row.cells[6].innerHTML=''; }
+}
+</script>
+{% endblock %}

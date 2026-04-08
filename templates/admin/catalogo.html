@@ -1,0 +1,88 @@
+{% extends "admin/base.html" %}
+{% block title %}Catálogo{% endblock %}
+{% block topbar_title %}📦 Catálogo de Productos{% endblock %}
+{% block topbar_actions %}
+  <a href="/admin/catalogo/importar-syma" class="btn btn-accent btn-sm">⬇ Importar de SYMA</a>
+{% endblock %}
+{% block head %}
+<style>
+.filtros { display:flex; gap:.8rem; flex-wrap:wrap; margin-bottom:1.5rem; align-items:flex-end; }
+.filtros input, .filtros select { padding:8px 12px; border:1.5px solid #d1d5db; border-radius:7px; font-size:.88rem; }
+.prod-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:1.2rem; }
+.pc { background:#fff; border-radius:10px; box-shadow:0 1px 8px rgba(0,0,0,.07); overflow:hidden; display:flex; flex-direction:column; }
+.pc-img { height:160px; background:#f3f4f6; display:flex; align-items:center; justify-content:center; font-size:2.5rem; overflow:hidden; position:relative; }
+.pc-img img { width:100%; height:100%; object-fit:cover; }
+.pc-badges { position:absolute; top:.5rem; left:.5rem; display:flex; gap:.3rem; }
+.pc-body { padding:1rem; flex:1; }
+.pc-code { font-size:.7rem; color:#9ca3af; margin-bottom:.2rem; }
+.pc-name { font-size:.9rem; font-weight:700; color:#111; margin-bottom:.3rem; line-height:1.4; }
+.pc-cat  { font-size:.72rem; color:#E67E22; font-weight:600; }
+.pc-footer { padding:.7rem 1rem; border-top:1px solid #f0f0f0; display:flex; gap:.5rem; }
+.sin { text-align:center; padding:4rem; color:#9ca3af; grid-column:1/-1; }
+</style>
+{% endblock %}
+{% block content %}
+
+<!-- Filtros -->
+<form method="get" action="/admin/catalogo">
+  <div class="filtros">
+    <input type="text" name="busqueda" placeholder="🔍 Buscar..." value="{{ busqueda }}" style="flex:1;min-width:200px">
+    <select name="categoria">
+      <option value="">Todas las categorías</option>
+      {% for c in categorias %}
+      <option value="{{ c }}" {{ 'selected' if c==categoria_sel }}>{{ c }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-primary btn-sm">Buscar</button>
+    {% if busqueda or categoria_sel %}
+    <a href="/admin/catalogo" class="btn btn-ghost btn-sm">✕ Limpiar</a>
+    {% endif %}
+  </div>
+</form>
+
+<p style="font-size:.82rem;color:#9ca3af;margin-bottom:1rem">{{ productos|length }} producto(s) encontrados</p>
+
+{% if productos %}
+<div class="prod-grid">
+  {% for p in productos %}
+  <div class="pc">
+    <div class="pc-img">
+      {% if p.imagenes is defined and p.imagenes %}
+        <img src="{{ p.imagenes[0].url_path }}" alt="{{ p.nombre }}">
+      {% else %}
+        📦
+      {% endif %}
+      <div class="pc-badges">
+        {% if p.activo %}<span class="badge badge-green">Activo</span>{% else %}<span class="badge badge-red">Inactivo</span>{% endif %}
+        {% if p.destacado %}<span class="badge badge-orange">⭐ Destacado</span>{% endif %}
+      </div>
+    </div>
+    <div class="pc-body">
+      <div class="pc-code">{{ p.codigo }}</div>
+      <div class="pc-name">{{ p.nombre }}</div>
+      {% if p.categoria %}<div class="pc-cat">{{ p.categoria }}</div>{% endif %}
+    </div>
+    <div class="pc-footer">
+      <a href="/admin/catalogo/{{ p.id }}" class="btn btn-primary btn-sm" style="flex:1;justify-content:center">✏️ Editar</a>
+      <button onclick="eliminarProducto({{ p.id }}, '{{ p.nombre|replace("'","") }}')" class="btn btn-danger btn-sm">🗑</button>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="prod-grid">
+  <div class="sin">
+    <p style="font-size:2rem;margin-bottom:.5rem">📦</p>
+    <p>No hay productos en el catálogo. <a href="/admin/catalogo/importar-syma">Importa desde SYMA</a>.</p>
+  </div>
+</div>
+{% endif %}
+
+<script>
+async function eliminarProducto(id, nombre) {
+  if (!confirm(`¿Eliminar "${nombre}" del catálogo?`)) return;
+  const r = await fetch(`/admin/catalogo/${id}`, { method:'DELETE' });
+  if (r.ok) location.reload();
+}
+</script>
+{% endblock %}
