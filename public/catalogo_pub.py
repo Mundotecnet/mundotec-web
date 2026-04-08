@@ -86,3 +86,11 @@ def get_stats_cotizaciones() -> dict:
 
 def marcar_cotizacion_leida(cot_id: int):
     execute("UPDATE cotizaciones SET leido=TRUE WHERE id=%s", (cot_id,))
+
+def get_cotizacion_by_id(cot_id: int) -> dict:
+    import json
+    row = query("SELECT * FROM cotizaciones WHERE id=%s", (cot_id,), many=False)
+    if row:
+        try: row["items"] = json.loads(row["items"]) if isinstance(row["items"], str) else row["items"]
+        except: row["items"] = []
+    return row

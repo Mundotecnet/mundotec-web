@@ -2,7 +2,7 @@ import os, sys
 sys.path.insert(0, os.path.dirname(__file__))
 
 from fastapi import FastAPI, Request, Query, Form, UploadFile, File, HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
@@ -23,8 +23,9 @@ from public.catalogo_pub import (get_catalogo_publico, get_producto_publico,
                                   get_categorias_publico, registrar_contacto,
                                   get_proyectos_publico, registrar_cotizacion,
                                   get_cotizaciones, get_stats_cotizaciones,
-                                  marcar_cotizacion_leida)
+                                  marcar_cotizacion_leida, get_cotizacion_by_id)
 from notificaciones import enviar_notificacion_contacto, enviar_notificacion_cotizacion
+from pdf_cotizacion import generar_pdf_cotizacion
 
 # ── Init ──────────────────────────────────────────────────────────────────────
 init_db()
@@ -169,9 +170,21 @@ async def carrito_cotizar(request: Request):
 
     cot = registrar_cotizacion(nombre, email, telefono, empresa, nota,
                                 items, total_sin_iva, total_con_iva, iva_pct)
+    cot_id  = cot["id"] if cot else 0
+    num_cot = f"COT-{cot_id:05d}"
+
+    # Generar PDF y enviar con adjunto
+    try:
+        cot_full = get_cotizacion_by_id(cot_id) if cot_id else {}
+        cfg      = get_config()
+        pdf      = generar_pdf_cotizacion(cot_full, cfg)
+    except Exception:
+        pdf = None
+
     enviar_notificacion_cotizacion(nombre, email, telefono, empresa, nota,
-                                    items, total_sin_iva, total_con_iva, iva_pct)
-    return {"ok": True, "id": cot["id"] if cot else None}
+                                    items, total_sin_iva, total_con_iva, iva_pct,
+                                    pdf_bytes=pdf, num_cot=num_cot)
+    return {"ok": True, "id": cot_id, "num_cot": num_cot}
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ADMIN — Login
@@ -390,6 +403,22 @@ async def admin_marcar_cotizacion_leida(request: Request, cid: int):
     _require_admin(request)
     marcar_cotizacion_leida(cid)
     return {"ok": True}
+
+@app.get("/admin/cotizaciones/{cid}/pdf")
+async def admin_descargar_pdf(request: Request, cid: int):
+    _require_admin(request)
+    cot = get_cotizacion_by_id(cid)
+    if not cot:
+        raise HTTPException(404, "Cotización no encontrada")
+    cfg      = get_config()
+    num_cot  = f"COT-{cid:05d}"
+    cot["id"] = cid
+    pdf      = generar_pdf_cotizacion(cot, cfg)
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"inline; filename=Cotizacion-{num_cot}.pdf"}
+    )
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ADMIN — Configuración del sitio

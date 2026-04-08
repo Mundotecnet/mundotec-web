@@ -241,9 +241,16 @@ async function enviarCotizacion() {
   });
 
   if (r.ok) {
+    const res = await r.json().catch(() => ({}));
     saveCart([]);
-    document.getElementById('cotForm').style.display    = 'none';
-    document.getElementById('cotSuccess').style.display = 'block';
+    document.getElementById('cotForm').style.display = 'none';
+    const suc = document.getElementById('cotSuccess');
+    if (res.num_cot) {
+      suc.querySelector('p').innerHTML =
+        `Su solicitud quedó registrada con el número <strong>${res.num_cot}</strong>.<br>
+         Le enviaremos la cotización formal a la brevedad posible.`;
+    }
+    suc.style.display = 'block';
   } else {
     btn.textContent = 'Enviar solicitud →';
     btn.disabled    = false;

@@ -58,7 +58,9 @@
         <td style="font-size:.78rem;color:#9ca3af;white-space:nowrap">
           {{ c.creado_en.strftime('%d/%m/%Y %H:%M') if c.creado_en else '' }}
         </td>
-        <td onclick="event.stopPropagation()">
+        <td onclick="event.stopPropagation()" style="white-space:nowrap">
+          <a href="/admin/cotizaciones/{{ c.id }}/pdf" target="_blank"
+             class="btn btn-outline btn-sm" title="Ver/Descargar PDF">📄 PDF</a>
           {% if not c.leido %}
           <button onclick="marcarLeida({{ c.id }})" class="btn btn-ghost btn-sm">✅ Revisada</button>
           {% endif %}

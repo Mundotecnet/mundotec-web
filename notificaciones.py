@@ -7,6 +7,7 @@ import smtplib
 import traceback
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.application import MIMEApplication
 
 
 def _get_smtp_cfg() -> dict:
@@ -111,7 +112,9 @@ def enviar_notificacion_contacto(nombre: str, email: str, telefono: str,
 def enviar_notificacion_cotizacion(nombre: str, email: str, telefono: str,
                                     empresa: str, nota: str,
                                     items: list, total_sin_iva: float,
-                                    total_con_iva: float, iva_pct: int = 13) -> bool:
+                                    total_con_iva: float, iva_pct: int = 13,
+                                    pdf_bytes: bytes = None,
+                                    num_cot: str = "") -> bool:
     cfg = _get_smtp_cfg()
     smtp_host     = cfg.get("smtp_host", "").strip()
     smtp_port     = int(cfg.get("smtp_port") or 587)
@@ -180,22 +183,41 @@ def enviar_notificacion_cotizacion(nombre: str, email: str, telefono: str,
         </body></html>
         """
 
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = f"🛒 Cotización de {nombre} ({len(items)} producto{'s' if len(items)!=1 else ''})"
-        msg["From"]    = smtp_from
-        msg["To"]      = notif_to
-        msg.attach(MIMEText(cuerpo_html, "html", "utf-8"))
+        asunto   = f"🛒 Cotización {num_cot} — {nombre} ({len(items)} producto{'s' if len(items)!=1 else ''})"
+        filename = f"Cotizacion-{num_cot}.pdf" if num_cot else "Cotizacion.pdf"
 
-        if smtp_port == 465:
-            server = smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=10)
-        else:
-            server = smtplib.SMTP(smtp_host, smtp_port, timeout=10)
-            server.ehlo(); server.starttls(); server.ehlo()
+        def _build_msg(destinatario: str) -> MIMEMultipart:
+            m = MIMEMultipart("mixed")
+            m["Subject"] = asunto
+            m["From"]    = smtp_from
+            m["To"]      = destinatario
+            m.attach(MIMEText(cuerpo_html, "html", "utf-8"))
+            if pdf_bytes:
+                adjunto = MIMEApplication(pdf_bytes, _subtype="pdf")
+                adjunto.add_header("Content-Disposition", "attachment", filename=filename)
+                m.attach(adjunto)
+            return m
 
-        server.login(smtp_user, smtp_password)
-        server.sendmail(smtp_from, [notif_to], msg.as_string())
-        server.quit()
-        print(f"[MAIL] Cotización enviada a {notif_to} — cliente: {nombre}, items: {len(items)}")
+        def _connect():
+            if smtp_port == 465:
+                srv = smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=15)
+            else:
+                srv = smtplib.SMTP(smtp_host, smtp_port, timeout=15)
+                srv.ehlo(); srv.starttls(); srv.ehlo()
+            srv.login(smtp_user, smtp_password)
+            return srv
+
+        # Enviar al admin
+        srv = _connect()
+        srv.sendmail(smtp_from, [notif_to], _build_msg(notif_to).as_string())
+
+        # Enviar copia al cliente si dio su correo
+        if email and email != notif_to:
+            srv.sendmail(smtp_from, [email], _build_msg(email).as_string())
+            print(f"[MAIL] Copia cotización enviada al cliente: {email}")
+
+        srv.quit()
+        print(f"[MAIL] Cotización {num_cot} enviada a {notif_to} — cliente: {nombre}, items: {len(items)}")
         return True
 
     except Exception:
