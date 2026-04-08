@@ -1,40 +1,58 @@
 {% extends "admin/base.html" %}
 {% block title %}Importar de SYMA{% endblock %}
-{% block topbar_title %}⬇ Importar productos desde SYMA{% endblock %}
+{% block topbar_title %}⬇ Productos SYMA — Pasillo 02{% endblock %}
 {% block topbar_actions %}
-  <a href="/admin/catalogo" class="btn btn-ghost btn-sm">← Volver</a>
+  <a href="/admin/catalogo" class="btn btn-ghost btn-sm">← Volver al catálogo</a>
 {% endblock %}
 {% block head %}
 <style>
-.search-bar { display:flex; gap:.8rem; flex-wrap:wrap; margin-bottom:1.5rem; align-items:flex-end; }
-.search-bar input, .search-bar select { padding:9px 13px; border:1.5px solid #d1d5db; border-radius:8px; font-size:.9rem; }
+.info-banner {
+  background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px;
+  padding: .9rem 1.2rem; margin-bottom: 1.2rem;
+  display: flex; align-items: center; gap: .8rem; font-size: .88rem; color: #1e40af;
+}
+.search-bar { display:flex; gap:.8rem; flex-wrap:wrap; margin-bottom:1.2rem; align-items:center; }
+.search-bar input { padding:9px 13px; border:1.5px solid #d1d5db; border-radius:8px; font-size:.9rem; flex:1; min-width:220px; }
 .res-table { width:100%; border-collapse:collapse; font-size:.86rem; }
 .res-table th { background:#f3f4f6; padding:9px 12px; text-align:left; font-size:.76rem; font-weight:700; color:#6b7280; text-transform:uppercase; }
-.res-table td { padding:9px 12px; border-bottom:1px solid #f0f0f0; }
+.res-table td { padding:9px 12px; border-bottom:1px solid #f0f0f0; vertical-align:middle; }
 .res-table tr.en-catalogo td { background:#f0fdf4; }
+.res-table tr:hover td { background:#fafafa; }
 .check-col { width:40px; text-align:center; }
-.sel-bar { background:#fff; border:1px solid #d1d5db; border-radius:10px; padding:1rem 1.5rem; margin-bottom:1.2rem; display:flex; align-items:center; justify-content:space-between; }
+.sel-bar {
+  background:#fff; border:1px solid #d1d5db; border-radius:10px;
+  padding:.9rem 1.5rem; margin-bottom:1.2rem;
+  display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;
+}
+.count-badge { background:#1E4E8C; color:#fff; border-radius:20px; padding:3px 12px; font-size:.8rem; font-weight:700; }
 </style>
 {% endblock %}
 {% block content %}
 
-<div class="card">
-  <div class="card-title">🔍 Buscar en SYMA</div>
-  <form method="get" action="/admin/catalogo/importar-syma">
-    <div class="search-bar">
-      <input type="text" name="busqueda" placeholder="Código o descripción..." value="{{ busqueda }}" style="flex:1;min-width:220px">
-      <input type="text" name="categoria" placeholder="Categoría/tipo" value="{{ categoria }}">
-      <button type="submit" class="btn btn-primary">Buscar</button>
-    </div>
-  </form>
+<!-- Banner informativo -->
+<div class="info-banner">
+  ℹ️ <span>Se muestran únicamente los productos marcados con <strong>ID_PASILLO = '02'</strong> en el sistema SYMA — son los productos habilitados para publicar en el catálogo web.</span>
 </div>
 
+<!-- Buscador -->
+<form method="get" action="/admin/catalogo/importar-syma" style="margin-bottom:1.2rem">
+  <div class="search-bar">
+    <input type="text" name="busqueda" placeholder="🔍 Filtrar por código o descripción..." value="{{ busqueda }}">
+    <button type="submit" class="btn btn-primary btn-sm">Buscar</button>
+    {% if busqueda %}<a href="/admin/catalogo/importar-syma" class="btn btn-ghost btn-sm">✕ Limpiar</a>{% endif %}
+  </div>
+</form>
+
 {% if resultados %}
-{% if resultados[0].error is defined %}
-  <div class="alert alert-error">⚠ Error conectando a SYMA: {{ resultados[0].error }}</div>
-{% else %}
+  {% if resultados[0].error is defined %}
+    <div class="alert alert-error">⚠ Error al conectar con SYMA: {{ resultados[0].error }}</div>
+  {% else %}
+
   <div class="sel-bar">
-    <span style="font-size:.88rem;color:#6b7280">{{ resultados|length }} resultado(s). Marque los que desea agregar al catálogo.</span>
+    <div style="display:flex;align-items:center;gap:.8rem">
+      <span class="count-badge">{{ resultados|length }} producto(s)</span>
+      <span style="font-size:.85rem;color:#6b7280">Marque los que desea agregar al catálogo web.</span>
+    </div>
     <button onclick="importarSeleccionados()" class="btn btn-accent">⬇ Importar seleccionados</button>
   </div>
 
@@ -42,31 +60,49 @@
     <table class="res-table">
       <thead>
         <tr>
-          <th class="check-col"><input type="checkbox" id="chkAll" onchange="toggleAll(this)"></th>
+          <th class="check-col">
+            <input type="checkbox" id="chkAll" onchange="toggleAll(this)" title="Seleccionar todos los no importados">
+          </th>
           <th>Código</th>
           <th>Descripción</th>
+          <th>No. Parte</th>
           <th>Categoría</th>
-          <th class="r" style="text-align:right">Precio ref.</th>
-          <th class="r" style="text-align:right">Stock</th>
+          <th style="text-align:right">Precio ref.</th>
+          <th style="text-align:right">Stock</th>
           <th>Estado</th>
         </tr>
       </thead>
       <tbody>
         {% for p in resultados %}
-        <tr class="{{ 'en-catalogo' if p.en_catalogo }}" data-codigo="{{ p.codigo }}" data-nombre="{{ p.nombre }}" data-cat="{{ p.categoria }}" data-precio="{{ p.precio_ref }}">
+        <tr class="{{ 'en-catalogo' if p.en_catalogo }}"
+            data-codigo="{{ p.codigo }}"
+            data-nombre="{{ p.nombre | replace('"', '&quot;') }}"
+            data-cat="{{ p.categoria }}"
+            data-precio="{{ p.precio_ref }}">
           <td class="check-col">
-            {% if not p.en_catalogo %}
-            <input type="checkbox" class="chk-prod" value="{{ p.codigo }}">
+            {% if p.en_catalogo %}
+              <span title="Ya está en el catálogo" style="font-size:1rem">✅</span>
             {% else %}
-            <span title="Ya en catálogo" style="font-size:.9rem">✅</span>
+              <input type="checkbox" class="chk-prod" value="{{ p.codigo }}">
             {% endif %}
           </td>
-          <td style="font-family:monospace;font-size:.82rem">{{ p.codigo }}</td>
-          <td style="max-width:280px">{{ p.nombre }}</td>
-          <td>{{ p.categoria }}</td>
-          <td style="text-align:right">₡{{ "{:,.0f}".format(p.precio_ref|float) }}</td>
-          <td style="text-align:right">{{ p.stock }}</td>
-          <td>{% if p.en_catalogo %}<span class="badge badge-green">En catálogo</span>{% else %}<span class="badge badge-gray">Disponible</span>{% endif %}</td>
+          <td style="font-family:monospace;font-size:.82rem;font-weight:600">{{ p.codigo }}</td>
+          <td style="max-width:260px">{{ p.nombre }}</td>
+          <td style="font-size:.8rem;color:#6b7280">{{ p.no_parte or '—' }}</td>
+          <td><span class="badge badge-blue">{{ p.categoria or '—' }}</span></td>
+          <td style="text-align:right;font-weight:600">
+            {% if p.precio_ref and p.precio_ref > 0 %}₡{{ "{:,.0f}".format(p.precio_ref | float) }}{% else %}—{% endif %}
+          </td>
+          <td style="text-align:right">
+            <span class="{{ 'badge badge-green' if p.stock > 0 else 'badge badge-red' }}">{{ p.stock | int }}</span>
+          </td>
+          <td>
+            {% if p.en_catalogo %}
+              <span class="badge badge-green">En catálogo</span>
+            {% else %}
+              <span class="badge badge-gray">Disponible</span>
+            {% endif %}
+          </td>
         </tr>
         {% endfor %}
       </tbody>
@@ -74,16 +110,14 @@
   </div>
 
   <div id="imp-msg" style="display:none;margin-top:1rem"></div>
-{% endif %}
+
+  {% endif %}
 {% else %}
-{% if busqueda or categoria %}
-<div class="card" style="text-align:center;padding:3rem;color:#9ca3af">Sin resultados. Intente con otro término de búsqueda.</div>
-{% else %}
-<div class="card" style="text-align:center;padding:3rem;color:#9ca3af">
-  <p style="font-size:2rem;margin-bottom:.5rem">🔍</p>
-  <p>Ingrese un término de búsqueda para consultar el inventario SYMA.</p>
+<div class="card" style="text-align:center;padding:4rem;color:#9ca3af">
+  <p style="font-size:2.5rem;margin-bottom:.5rem">📭</p>
+  <p>No hay productos con <strong>ID_PASILLO = '02'</strong> en SYMA.</p>
+  <p style="font-size:.82rem;margin-top:.5rem">Para que un producto aparezca aquí, debe marcarse con ID_PASILLO='02' en el sistema SYMA.</p>
 </div>
-{% endif %}
 {% endif %}
 
 <script>
@@ -95,25 +129,35 @@ async function importarSeleccionados() {
   const selRows = [...document.querySelectorAll('.chk-prod:checked')].map(c => {
     const tr = c.closest('tr');
     return {
-      codigo:      tr.dataset.codigo,
-      nombre:      tr.dataset.nombre,
-      categoria:   tr.dataset.cat,
-      precio_ref:  parseFloat(tr.dataset.precio) || null,
+      codigo:    tr.dataset.codigo,
+      nombre:    tr.dataset.nombre,
+      categoria: tr.dataset.cat,
+      precio_ref: parseFloat(tr.dataset.precio) || null,
     };
   });
-  if (!selRows.length) { alert('Seleccione al menos un producto.'); return; }
+
+  if (!selRows.length) {
+    alert('Seleccione al menos un producto para importar.');
+    return;
+  }
+
+  const btn = document.querySelector('.btn-accent');
+  btn.textContent = '⏳ Importando...';
+  btn.disabled = true;
 
   const r   = await fetch('/admin/catalogo/importar-syma', {
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ productos: selRows })
   });
   const res = await r.json();
+
   const msg = document.getElementById('imp-msg');
   msg.className = 'alert alert-success';
-  msg.textContent = `✅ ${res.importados} producto(s) importados correctamente. Ahora puede editarlos en el catálogo.`;
+  msg.innerHTML = `✅ <strong>${res.importados}</strong> producto(s) importados al catálogo. Redirigiendo...`;
   msg.style.display = 'block';
-  setTimeout(() => { window.location.href = '/admin/catalogo'; }, 2000);
+
+  setTimeout(() => { window.location.href = '/admin/catalogo'; }, 1800);
 }
 </script>
 {% endblock %}

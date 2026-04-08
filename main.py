@@ -186,13 +186,12 @@ async def admin_catalogo(request: Request, busqueda: str = Query(""), categoria:
 
 @app.get("/admin/catalogo/importar-syma", response_class=HTMLResponse)
 async def admin_importar_syma_get(request: Request,
-                                   busqueda: str = Query(""),
-                                   categoria: str = Query("")):
+                                   busqueda: str = Query("")):
     _require_admin(request)
-    resultados = buscar_en_syma(busqueda, categoria) if (busqueda or categoria) else []
+    # Siempre carga productos con ID_PASILLO='02', filtro adicional por búsqueda
+    resultados = buscar_en_syma(busqueda)
     return templates.TemplateResponse("admin/importar_syma.html", {
-        "request": request, "resultados": resultados,
-        "busqueda": busqueda, "categoria": categoria
+        "request": request, "resultados": resultados, "busqueda": busqueda
     })
 
 @app.post("/admin/catalogo/importar-syma")

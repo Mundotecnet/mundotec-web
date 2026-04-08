@@ -126,28 +126,33 @@ def get_categorias() -> list:
 
 # ── Importar desde SYMA ───────────────────────────────────────────────────────
 
-def buscar_en_syma(busqueda="", categoria="", limit=50) -> list:
-    """Conecta a SQL Server Syma y devuelve productos para importar."""
+def buscar_en_syma(busqueda="", limit=200) -> list:
+    """
+    Conecta a SQL Server Syma y devuelve los productos con ID_PASILLO='02'
+    (productos seleccionados para publicar en el catálogo web).
+    Filtro adicional opcional por búsqueda de código o descripción.
+    """
     try:
         import pyodbc
         from config import SYMA_DSN
         conn = pyodbc.connect(SYMA_DSN)
         cur  = conn.cursor()
-        filtros = ["p.ESTADO='A'"]
+
+        filtros = ["p.ESTADO='A'", "RTRIM(ISNULL(p.ID_PASILLO,''))='02'"]
         params  = []
         if busqueda:
-            filtros.append("(p.ID_PRODUCTO LIKE ? OR p.DESCRIPCION LIKE ?)")
+            filtros.append("(RTRIM(p.ID_PRODUCTO) LIKE ? OR p.DESCRIPCION LIKE ?)")
             params += [f"%{busqueda}%", f"%{busqueda}%"]
-        if categoria:
-            filtros.append("p.TIPO LIKE ?"); params.append(f"%{categoria}%")
+
         where = "WHERE " + " AND ".join(filtros)
         cur.execute(f"""
             SELECT TOP {limit}
-                RTRIM(p.ID_PRODUCTO) AS codigo,
-                RTRIM(p.DESCRIPCION) AS nombre,
-                RTRIM(ISNULL(p.TIPO,'')) AS categoria,
-                ISNULL(p.PRECIO1, 0) AS precio_ref,
-                ISNULL(p.EXISTENCIA, 0) AS stock
+                RTRIM(p.ID_PRODUCTO)             AS codigo,
+                RTRIM(p.DESCRIPCION)             AS nombre,
+                RTRIM(ISNULL(p.ID_CATEGORIA,'')) AS categoria,
+                ISNULL(p.PRECIO, 0)              AS precio_ref,
+                ISNULL(p.CANTIDAD, 0)            AS stock,
+                RTRIM(ISNULL(p.NO_PARTE,''))     AS no_parte
             FROM PRODUCTOS p {where}
             ORDER BY p.DESCRIPCION
         """, params)
