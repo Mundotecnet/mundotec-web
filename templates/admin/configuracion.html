@@ -14,6 +14,7 @@
       <div class="fi"><label>Slogan</label><input type="text" name="empresa_slogan" value="{{ cfg.empresa_slogan or '' }}" placeholder="Ej: Soluciones tecnológicas..."></div>
       <div class="fi"><label>Descripción (aparece en pie de página y Nosotros)</label><textarea name="empresa_descripcion" rows="3">{{ cfg.empresa_descripcion or '' }}</textarea></div>
       <div class="fi"><label>Año de fundación</label><input type="number" name="empresa_anio_fundacion" value="{{ cfg.empresa_anio_fundacion or '2010' }}" style="width:120px"></div>
+      <div class="fi"><label>IVA (%)</label><input type="number" name="iva_porcentaje" value="{{ cfg.iva_porcentaje or '13' }}" style="width:80px" min="0" max="100"><small style="color:#9ca3af;font-size:.75rem">Costa Rica: 13% estándar</small></div>
     </div>
 
     <div class="card">

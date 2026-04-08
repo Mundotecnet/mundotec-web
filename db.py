@@ -64,6 +64,21 @@ CREATE TABLE IF NOT EXISTS contacto (
     leido        BOOLEAN      DEFAULT FALSE
 );
 
+CREATE TABLE IF NOT EXISTS cotizaciones (
+    id            SERIAL PRIMARY KEY,
+    nombre        VARCHAR(150) NOT NULL,
+    email         VARCHAR(200),
+    telefono      VARCHAR(30),
+    empresa       VARCHAR(150),
+    nota          TEXT,
+    items         TEXT         NOT NULL,
+    total_sin_iva NUMERIC(15,2),
+    total_con_iva NUMERIC(15,2),
+    iva_pct       INT          DEFAULT 13,
+    leido         BOOLEAN      DEFAULT FALSE,
+    creado_en     TIMESTAMP    DEFAULT NOW()
+);
+
 ALTER TABLE contacto ADD COLUMN IF NOT EXISTS producto_ref VARCHAR(300);
 
 -- Datos iniciales de configuración
@@ -80,6 +95,7 @@ INSERT INTO site_config (clave, valor) VALUES
     ('hero_subtitulo',         'Productos, soporte técnico y soluciones a medida'),
     ('color_primario',         '#1E4E8C'),
     ('color_acento',           '#E67E22'),
+    ('iva_porcentaje',          '13'),
     ('smtp_host',              ''),
     ('smtp_port',              '587'),
     ('smtp_user',              ''),

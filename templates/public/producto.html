@@ -69,6 +69,16 @@
     {% endif %}
 
     <h1>{{ producto.nombre }}</h1>
+    {% if producto.precio_ref and producto.precio_ref > 0 %}
+    {% set precio_iva = (producto.precio_ref | float) * 1.13 %}
+    <div style="margin-bottom:1rem;padding:1rem;background:#eff6ff;border-radius:10px;border:1px solid #bfdbfe">
+      <div style="font-size:1.8rem;font-weight:800;color:var(--primary)">₡{{ "{:,.0f}".format(precio_iva) }}</div>
+      <div style="font-size:.8rem;color:#6b7280;margin-top:.2rem">
+        Precio de referencia con IVA (13%) incluido
+        <span style="margin-left:.8rem">· Sin IVA: ₡{{ "{:,.0f}".format(producto.precio_ref | float) }}</span>
+      </div>
+    </div>
+    {% endif %}
     <p style="font-size:.8rem;color:var(--gray);margin-bottom:1.5rem">Código: <strong>{{ producto.codigo }}</strong></p>
 
     {% if producto.descripcion_web %}
@@ -93,8 +103,12 @@
     {% endif %}
 
     <div class="acciones">
+      <button onclick="agregarAlCarrito({{ producto.id }},'{{ producto.codigo }}','{{ producto.nombre | replace("'","\\'")|replace('"','\\"') }}',{{ producto.precio_ref or 0 }},'{{ (producto.imagenes[0].url_path if producto.imagenes else '') }}')"
+              class="btn btn-primary" style="font-size:1rem;padding:14px 28px">
+        🛒 Agregar al carrito
+      </button>
       <a href="/contacto?prod_id={{ producto.id }}" class="btn btn-accent" style="font-size:1rem;padding:14px 28px">
-        💬 Me interesa / Solicitar cotización
+        💬 Consultar
       </a>
       {% if producto.ficha_path %}
       <a href="{{ producto.ficha_path }}" target="_blank" class="ficha-btn">📄 Ficha técnica</a>

@@ -21,8 +21,10 @@ from admin.config_site import (get_config, set_config_bulk, get_contactos,
                                 marcar_leido, get_stats_contacto)
 from public.catalogo_pub import (get_catalogo_publico, get_producto_publico,
                                   get_categorias_publico, registrar_contacto,
-                                  get_proyectos_publico)
-from notificaciones import enviar_notificacion_contacto
+                                  get_proyectos_publico, registrar_cotizacion,
+                                  get_cotizaciones, get_stats_cotizaciones,
+                                  marcar_cotizacion_leida)
+from notificaciones import enviar_notificacion_contacto, enviar_notificacion_cotizacion
 
 # ── Init ──────────────────────────────────────────────────────────────────────
 init_db()
@@ -140,6 +142,36 @@ async def api_producto(prod_id: int):
     p = get_producto_publico(prod_id)
     if not p: raise HTTPException(404)
     return p
+
+@app.get("/carrito", response_class=HTMLResponse)
+async def carrito(request: Request):
+    cfg = get_config()
+    iva = int(cfg.get("iva_porcentaje") or 13)
+    return templates.TemplateResponse("public/carrito.html", {
+        "request": request, "cfg": cfg, "pagina": "carrito", "iva": iva
+    })
+
+@app.post("/carrito/cotizar")
+async def carrito_cotizar(request: Request):
+    data          = await request.json()
+    nombre        = data.get("nombre", "")
+    email         = data.get("email", "")
+    telefono      = data.get("telefono", "")
+    empresa       = data.get("empresa", "")
+    nota          = data.get("nota", "")
+    items         = data.get("items", [])
+    total_sin_iva = float(data.get("total_sin_iva", 0))
+    total_con_iva = float(data.get("total_con_iva", 0))
+    iva_pct       = int(data.get("iva_pct", 13))
+
+    if not nombre or not items:
+        raise HTTPException(400, "Datos incompletos")
+
+    cot = registrar_cotizacion(nombre, email, telefono, empresa, nota,
+                                items, total_sin_iva, total_con_iva, iva_pct)
+    enviar_notificacion_cotizacion(nombre, email, telefono, empresa, nota,
+                                    items, total_sin_iva, total_con_iva, iva_pct)
+    return {"ok": True, "id": cot["id"] if cot else None}
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ADMIN — Login
@@ -337,6 +369,26 @@ async def admin_contacto(request: Request, leido: str = Query("")):
 async def admin_marcar_leido(request: Request, cid: int):
     _require_admin(request)
     marcar_leido(cid)
+    return {"ok": True}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ADMIN — Cotizaciones
+# ─────────────────────────────────────────────────────────────────────────────
+@app.get("/admin/cotizaciones", response_class=HTMLResponse)
+async def admin_cotizaciones(request: Request, leido: str = Query("")):
+    _require_admin(request)
+    filtro    = True if leido == "si" else (False if leido == "no" else None)
+    cots      = get_cotizaciones(filtro)
+    stats     = get_stats_cotizaciones()
+    return templates.TemplateResponse("admin/cotizaciones.html", {
+        "request": request, "cotizaciones": cots,
+        "stats": stats, "filtro": leido
+    })
+
+@app.post("/admin/cotizaciones/{cid}/leido")
+async def admin_marcar_cotizacion_leida(request: Request, cid: int):
+    _require_admin(request)
+    marcar_cotizacion_leida(cid)
     return {"ok": True}
 
 # ─────────────────────────────────────────────────────────────────────────────

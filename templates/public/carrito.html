@@ -1,0 +1,256 @@
+{% extends "public/base.html" %}
+{% block title %}Carrito de Cotización{% endblock %}
+{% block head %}
+<style>
+.page-hero { background:linear-gradient(135deg,var(--dark),var(--primary)); padding:3rem 5%; color:#fff; }
+.page-hero h1 { font-size:2rem; font-weight:800; }
+.cart-layout { display:grid; grid-template-columns:1fr 380px; gap:2rem; padding:2.5rem 5%; align-items:start; }
+.cart-table { width:100%; border-collapse:collapse; }
+.cart-table th { background:#f3f4f6; padding:10px 14px; text-align:left; font-size:.78rem; font-weight:700; color:#6b7280; text-transform:uppercase; }
+.cart-table td { padding:12px 14px; border-bottom:1px solid #f0f0f0; vertical-align:middle; }
+.cart-table .prod-img-sm { width:56px; height:56px; object-fit:cover; border-radius:8px; background:#f3f4f6; display:flex; align-items:center; justify-content:center; font-size:1.5rem; }
+.qty-ctrl { display:flex; align-items:center; gap:.4rem; }
+.qty-ctrl button { width:28px; height:28px; border:1.5px solid #d1d5db; border-radius:6px; background:#fff; cursor:pointer; font-size:1rem; font-weight:700; display:flex; align-items:center; justify-content:center; }
+.qty-ctrl button:hover { background:var(--primary); color:#fff; border-color:var(--primary); }
+.qty-ctrl input { width:44px; text-align:center; border:1.5px solid #d1d5db; border-radius:6px; padding:4px; font-size:.9rem; }
+.resumen-card { background:#fff; border-radius:14px; box-shadow:0 4px 24px rgba(0,0,0,.09); padding:1.8rem; position:sticky; top:80px; }
+.resumen-card h3 { font-size:1.1rem; font-weight:800; margin-bottom:1.2rem; }
+.resumen-row { display:flex; justify-content:space-between; margin-bottom:.6rem; font-size:.9rem; }
+.resumen-total { display:flex; justify-content:space-between; font-size:1.2rem; font-weight:800; color:var(--primary); border-top:2px solid #e5e7eb; padding-top:.8rem; margin-top:.8rem; }
+.cotizar-btn { width:100%; padding:14px; background:var(--accent); color:#fff; border:none; border-radius:10px; font-size:1rem; font-weight:700; cursor:pointer; margin-top:1.2rem; transition:.2s; }
+.cotizar-btn:hover { background:#cf6d17; }
+.empty-cart { text-align:center; padding:5rem 5%; color:var(--gray); }
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:200; align-items:center; justify-content:center; }
+.modal-overlay.open { display:flex; }
+.modal-box { background:#fff; border-radius:16px; padding:2rem; width:100%; max-width:500px; max-height:90vh; overflow-y:auto; }
+.modal-box h3 { font-size:1.2rem; font-weight:800; margin-bottom:1.2rem; }
+.fi { display:flex; flex-direction:column; gap:.35rem; margin-bottom:.9rem; }
+.fi label { font-size:.82rem; font-weight:600; color:#1a1a2e; }
+.fi input, .fi textarea { padding:10px 13px; border:1.5px solid #d1d5db; border-radius:8px; font-size:.9rem; font-family:inherit; outline:none; }
+.fi input:focus, .fi textarea:focus { border-color:var(--primary); }
+@media(max-width:800px) { .cart-layout { grid-template-columns:1fr; } .resumen-card { position:static; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+  <h1>🛒 Carrito de cotización</h1>
+  <p>Seleccione los productos que desea cotizar</p>
+</div>
+
+<div id="emptyCart" class="empty-cart" style="display:none">
+  <p style="font-size:3rem;margin-bottom:1rem">🛒</p>
+  <h3 style="margin-bottom:.5rem">Su carrito está vacío</h3>
+  <p style="margin-bottom:1.5rem">Explore el catálogo y agregue productos.</p>
+  <a href="/catalogo" class="btn btn-primary">Ver catálogo →</a>
+</div>
+
+<div id="cartContent" class="cart-layout" style="display:none">
+  <!-- Tabla de productos -->
+  <div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <h2 style="font-size:1.1rem;font-weight:700">Productos seleccionados (<span id="cartCount">0</span>)</h2>
+      <button onclick="vaciarCarrito()" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:.85rem;font-weight:600">🗑 Vaciar carrito</button>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <table class="cart-table">
+        <thead>
+          <tr>
+            <th colspan="2">Producto</th>
+            <th>Precio s/IVA</th>
+            <th>IVA ({{ iva }}%)</th>
+            <th>Precio c/IVA</th>
+            <th style="text-align:center">Cantidad</th>
+            <th style="text-align:right">Subtotal</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="cartBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Resumen -->
+  <div class="resumen-card">
+    <h3>📋 Resumen</h3>
+    <div class="resumen-row"><span>Subtotal sin IVA</span><span id="sumSinIva">₡0</span></div>
+    <div class="resumen-row"><span>IVA ({{ iva }}%)</span><span id="sumIva">₡0</span></div>
+    <div class="resumen-total"><span>TOTAL</span><span id="sumTotal">₡0</span></div>
+    <button class="cotizar-btn" onclick="abrirModal()">💬 Solicitar cotización</button>
+    <a href="/catalogo" style="display:block;text-align:center;margin-top:.8rem;font-size:.83rem;color:var(--gray)">← Seguir agregando productos</a>
+  </div>
+</div>
+
+<!-- Modal de cotización -->
+<div class="modal-overlay" id="modalCotizar">
+  <div class="modal-box">
+    <h3>💬 Solicitar cotización</h3>
+    <p style="font-size:.85rem;color:#6b7280;margin-bottom:1.2rem">Complete sus datos y le responderemos a la brevedad con la cotización formal.</p>
+    <div id="cotForm">
+      <div class="fi"><label>Nombre *</label><input type="text" id="cNombre" required placeholder="Su nombre completo"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem">
+        <div class="fi"><label>Teléfono</label><input type="tel" id="cTelefono" placeholder="8888-0000"></div>
+        <div class="fi"><label>Correo</label><input type="email" id="cEmail" placeholder="correo@ejemplo.com"></div>
+      </div>
+      <div class="fi"><label>Empresa</label><input type="text" id="cEmpresa" placeholder="Nombre de su empresa"></div>
+      <div class="fi"><label>Nota adicional</label><textarea id="cNota" rows="3" placeholder="¿Algún detalle especial? Cantidades, urgencia, etc."></textarea></div>
+      <div style="display:flex;gap:.8rem;margin-top:1rem">
+        <button onclick="cerrarModal()" style="flex:1;padding:11px;border:1.5px solid #d1d5db;border-radius:8px;background:#fff;cursor:pointer;font-weight:600">Cancelar</button>
+        <button onclick="enviarCotizacion()" style="flex:2;padding:11px;background:var(--accent);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:.95rem">Enviar solicitud →</button>
+      </div>
+    </div>
+    <div id="cotSuccess" style="display:none;text-align:center;padding:1.5rem 0">
+      <div style="font-size:3rem;margin-bottom:.8rem">✅</div>
+      <h4 style="margin-bottom:.5rem;color:#065f46">¡Solicitud enviada!</h4>
+      <p style="color:#047857;font-size:.9rem">Le responderemos a la brevedad con su cotización.</p>
+      <button onclick="cerrarModal();location.href='/catalogo'" style="margin-top:1.2rem;padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600">Seguir comprando</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const IVA_PCT = {{ iva }};
+
+function fmt(n) {
+  return '₡' + Math.round(n).toLocaleString('es-CR');
+}
+
+function getCart() {
+  try { return JSON.parse(localStorage.getItem('mw_carrito') || '[]'); }
+  catch { return []; }
+}
+
+function saveCart(c) {
+  localStorage.setItem('mw_carrito', JSON.stringify(c));
+  updateNavBadge();
+}
+
+function updateNavBadge() {
+  const c    = getCart();
+  const total = c.reduce((s,i) => s + i.cantidad, 0);
+  document.querySelectorAll('.cart-badge').forEach(b => {
+    b.textContent = total;
+    b.style.display = total > 0 ? 'flex' : 'none';
+  });
+}
+
+function renderCart() {
+  const cart = getCart();
+  const body = document.getElementById('cartBody');
+  if (!cart.length) {
+    document.getElementById('emptyCart').style.display = 'block';
+    document.getElementById('cartContent').style.display = 'none';
+    return;
+  }
+  document.getElementById('emptyCart').style.display = 'none';
+  document.getElementById('cartContent').style.display = 'grid';
+  document.getElementById('cartCount').textContent = cart.length;
+
+  let sinIva = 0, total = 0;
+  body.innerHTML = '';
+  cart.forEach((it, idx) => {
+    const pRef  = parseFloat(it.precio_ref) || 0;
+    const pIva  = pRef * (1 + IVA_PCT / 100);
+    const iva   = pIva - pRef;
+    const sub   = pIva * it.cantidad;
+    sinIva += pRef * it.cantidad;
+    total  += sub;
+    const img = it.imagen
+      ? `<img src="${it.imagen}" style="width:56px;height:56px;object-fit:cover;border-radius:8px">`
+      : `<div style="width:56px;height:56px;border-radius:8px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:1.4rem">📦</div>`;
+
+    body.innerHTML += `
+      <tr>
+        <td style="width:68px">${img}</td>
+        <td>
+          <div style="font-weight:600;font-size:.9rem">${it.nombre}</div>
+          <div style="font-size:.75rem;color:#6b7280">Cód: ${it.codigo}</div>
+        </td>
+        <td style="font-size:.85rem">${pRef > 0 ? fmt(pRef) : '—'}</td>
+        <td style="font-size:.85rem;color:#e67e22">${pRef > 0 ? fmt(iva) : '—'}</td>
+        <td style="font-weight:600">${pRef > 0 ? fmt(pIva) : '—'}</td>
+        <td>
+          <div class="qty-ctrl">
+            <button onclick="cambiarQty(${idx}, -1)">−</button>
+            <input type="number" value="${it.cantidad}" min="1" max="999"
+                   onchange="setQty(${idx}, this.value)" style="width:44px;text-align:center;border:1.5px solid #d1d5db;border-radius:6px;padding:4px">
+            <button onclick="cambiarQty(${idx}, 1)">+</button>
+          </div>
+        </td>
+        <td style="text-align:right;font-weight:700">${pRef > 0 ? fmt(sub) : '—'}</td>
+        <td><button onclick="quitarItem(${idx})" style="background:none;border:none;cursor:pointer;color:#ef4444;font-size:1.1rem" title="Quitar">🗑</button></td>
+      </tr>`;
+  });
+
+  const ivaSum = total - sinIva;
+  document.getElementById('sumSinIva').textContent = fmt(sinIva);
+  document.getElementById('sumIva').textContent    = fmt(ivaSum);
+  document.getElementById('sumTotal').textContent  = fmt(total);
+}
+
+function cambiarQty(idx, delta) {
+  const c = getCart();
+  c[idx].cantidad = Math.max(1, (c[idx].cantidad || 1) + delta);
+  saveCart(c); renderCart();
+}
+
+function setQty(idx, val) {
+  const c = getCart();
+  c[idx].cantidad = Math.max(1, parseInt(val) || 1);
+  saveCart(c); renderCart();
+}
+
+function quitarItem(idx) {
+  const c = getCart();
+  c.splice(idx, 1);
+  saveCart(c); renderCart();
+}
+
+function vaciarCarrito() {
+  if (confirm('¿Vaciar el carrito?')) { saveCart([]); renderCart(); }
+}
+
+function abrirModal()  { document.getElementById('modalCotizar').classList.add('open'); }
+function cerrarModal() { document.getElementById('modalCotizar').classList.remove('open'); }
+
+async function enviarCotizacion() {
+  const nombre = document.getElementById('cNombre').value.trim();
+  if (!nombre) { alert('Ingrese su nombre.'); return; }
+
+  const cart       = getCart();
+  const sinIva     = cart.reduce((s,i) => s + (parseFloat(i.precio_ref)||0)*i.cantidad, 0);
+  const conIva     = sinIva * (1 + IVA_PCT/100);
+  const btn        = document.querySelector('#cotForm button:last-child');
+  btn.textContent  = '⏳ Enviando...';
+  btn.disabled     = true;
+
+  const r = await fetch('/carrito/cotizar', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      nombre,
+      email:         document.getElementById('cEmail').value,
+      telefono:      document.getElementById('cTelefono').value,
+      empresa:       document.getElementById('cEmpresa').value,
+      nota:          document.getElementById('cNota').value,
+      items:         cart,
+      total_sin_iva: sinIva,
+      total_con_iva: conIva,
+      iva_pct:       IVA_PCT
+    })
+  });
+
+  if (r.ok) {
+    saveCart([]);
+    document.getElementById('cotForm').style.display    = 'none';
+    document.getElementById('cotSuccess').style.display = 'block';
+  } else {
+    btn.textContent = 'Enviar solicitud →';
+    btn.disabled    = false;
+    alert('Error al enviar. Intente de nuevo.');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => { renderCart(); updateNavBadge(); });
+</script>
+{% endblock %}

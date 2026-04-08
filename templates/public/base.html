@@ -133,6 +133,7 @@
       .section-title { font-size:1.5rem; }
       .footer-grid { grid-template-columns:1fr; }
     }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
   </style>
   {% block head %}{% endblock %}
 </head>
@@ -145,6 +146,12 @@
     <li><a href="/catalogo"  class="{{ 'active' if pagina=='catalogo'  }}">Catálogo</a></li>
     <li><a href="/proyectos" class="{{ 'active' if pagina=='proyectos' }}">Proyectos</a></li>
     <li><a href="/contacto"  class="nav-cta">Contáctenos</a></li>
+    <li>
+      <a href="/carrito" style="position:relative;display:inline-flex;align-items:center;gap:.3rem">
+        🛒
+        <span class="cart-badge" style="display:none;position:absolute;top:-8px;right:-10px;background:#ef4444;color:#fff;border-radius:50%;width:18px;height:18px;font-size:.65rem;font-weight:700;align-items:center;justify-content:center">0</span>
+      </a>
+    </li>
   </ul>
   <button class="hamburger" onclick="document.getElementById('navLinks').classList.toggle('open')" aria-label="Menú">
     <span></span><span></span><span></span>
@@ -183,5 +190,36 @@
   </div>
 </footer>
 
+<script>
+function updateNavBadge() {
+  try {
+    const c = JSON.parse(localStorage.getItem('mw_carrito') || '[]');
+    const total = c.reduce((s,i) => s + (i.cantidad||1), 0);
+    document.querySelectorAll('.cart-badge').forEach(b => {
+      b.textContent = total;
+      b.style.display = total > 0 ? 'flex' : 'none';
+    });
+  } catch(e) {}
+}
+
+function agregarAlCarrito(id, codigo, nombre, precio_ref, imagen) {
+  try {
+    let c = JSON.parse(localStorage.getItem('mw_carrito') || '[]');
+    const idx = c.findIndex(i => i.id === id);
+    if (idx >= 0) { c[idx].cantidad++; }
+    else { c.push({ id, codigo, nombre, precio_ref: parseFloat(precio_ref)||0, imagen: imagen||'', cantidad: 1 }); }
+    localStorage.setItem('mw_carrito', JSON.stringify(c));
+    updateNavBadge();
+    // Toast notification
+    const t = document.createElement('div');
+    t.textContent = '✅ Agregado al carrito';
+    t.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#1E4E8C;color:#fff;padding:12px 20px;border-radius:10px;font-weight:600;font-size:.9rem;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.2);animation:fadeIn .2s ease';
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2200);
+  } catch(e) {}
+}
+
+document.addEventListener('DOMContentLoaded', updateNavBadge);
+</script>
 </body>
 </html>

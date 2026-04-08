@@ -58,3 +58,31 @@ def get_proyectos_publico(categoria="") -> list:
         filtros.append("categoria ILIKE %s"); params.append(f"%{categoria}%")
     where = "WHERE " + " AND ".join(filtros)
     return query(f"SELECT * FROM proyectos {where} ORDER BY orden, fecha DESC NULLS LAST", params)
+
+
+def registrar_cotizacion(nombre, email, telefono, empresa, nota, items, total_sin_iva, total_con_iva, iva_pct=13) -> dict:
+    import json
+    return execute("""
+        INSERT INTO cotizaciones (nombre, email, telefono, empresa, nota, items, total_sin_iva, total_con_iva, iva_pct)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id
+    """, (nombre, email or None, telefono or None, empresa or None, nota or None,
+          json.dumps(items, ensure_ascii=False),
+          total_sin_iva, total_con_iva, iva_pct),
+         returning=True)
+
+def get_cotizaciones(leido=None) -> list:
+    import json
+    where  = "" if leido is None else "WHERE leido=%s"
+    params = () if leido is None else (leido,)
+    rows   = query(f"SELECT * FROM cotizaciones {where} ORDER BY creado_en DESC", params)
+    for r in rows:
+        try:    r["items"] = json.loads(r["items"]) if isinstance(r["items"], str) else r["items"]
+        except: r["items"] = []
+    return rows
+
+def get_stats_cotizaciones() -> dict:
+    rows = query("SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE NOT leido) AS no_leidas FROM cotizaciones")
+    return rows[0] if rows else {"total": 0, "no_leidas": 0}
+
+def marcar_cotizacion_leida(cot_id: int):
+    execute("UPDATE cotizaciones SET leido=TRUE WHERE id=%s", (cot_id,))

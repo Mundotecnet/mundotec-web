@@ -98,8 +98,21 @@
       {% elif p.descripcion_syma %}
         <div class="prod-desc">{{ p.descripcion_syma[:100] }}{% if p.descripcion_syma|length > 100 %}…{% endif %}</div>
       {% endif %}
-      <div class="prod-footer">
-        <a href="/catalogo/{{ p.id }}">Ver detalle →</a>
+      <div style="margin-top:1rem">
+        {% if p.precio_ref and p.precio_ref > 0 %}
+        {% set precio_iva = (p.precio_ref | float) * 1.13 %}
+        <div style="margin-bottom:.6rem">
+          <span style="font-size:1.05rem;font-weight:800;color:var(--primary)">₡{{ "{:,.0f}".format(precio_iva) }}</span>
+          <span style="font-size:.72rem;color:var(--gray);margin-left:.3rem">IVA inc.</span>
+        </div>
+        {% endif %}
+        <div style="display:flex;gap:.5rem">
+          <a href="/catalogo/{{ p.id }}" style="flex:1;text-align:center;background:var(--primary);color:#fff;padding:7px 10px;border-radius:6px;font-size:.8rem;font-weight:600">Ver detalle</a>
+          <button onclick="agregarAlCarrito({{ p.id }},'{{ p.codigo }}','{{ p.nombre | replace("'", "\\'") }}',{{ p.precio_ref or 0 }},'{{ p.imagen_principal or '' }}')"
+                  style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:7px 10px;cursor:pointer;font-size:.8rem;font-weight:600">
+            🛒
+          </button>
+        </div>
       </div>
     </div>
   </div>

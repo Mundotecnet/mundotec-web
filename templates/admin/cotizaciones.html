@@ -1,0 +1,117 @@
+{% extends "admin/base.html" %}
+{% block title %}Cotizaciones{% endblock %}
+{% block topbar_title %}🛒 Solicitudes de cotización{% endblock %}
+{% block head %}
+<style>
+.items-detail { display:none; background:#f8fafc; }
+.items-detail.open { display:table-row; }
+.items-tbl { width:100%; border-collapse:collapse; font-size:.82rem; margin:.5rem 0; }
+.items-tbl th { background:#e5e7eb; padding:6px 10px; text-align:left; }
+.items-tbl td { padding:6px 10px; border-bottom:1px solid #f0f0f0; }
+.items-tbl td:last-child { text-align:right; font-weight:600; }
+</style>
+{% endblock %}
+{% block content %}
+
+<div class="stats-grid" style="margin-bottom:1.5rem">
+  <div class="stat-card" style="border-color:#1E4E8C"><div class="num">{{ stats.total }}</div><div class="lbl">Total cotizaciones</div></div>
+  <div class="stat-card" style="border-color:{{ '#ef4444' if stats.no_leidas > 0 else '#6b7280' }}"><div class="num">{{ stats.no_leidas }}</div><div class="lbl">Sin revisar</div></div>
+</div>
+
+<div style="display:flex;gap:.6rem;margin-bottom:1rem">
+  <a href="/admin/cotizaciones"        class="btn btn-sm {{ 'btn-primary' if not filtro else 'btn-ghost' }}">Todas</a>
+  <a href="/admin/cotizaciones?leido=no" class="btn btn-sm {{ 'btn-primary' if filtro=='no' else 'btn-ghost' }}">Sin revisar</a>
+  <a href="/admin/cotizaciones?leido=si" class="btn btn-sm {{ 'btn-primary' if filtro=='si' else 'btn-ghost' }}">Revisadas</a>
+</div>
+
+<div class="card" style="padding:0;overflow:hidden">
+  {% if cotizaciones %}
+  <table class="tbl" id="cotTable">
+    <thead>
+      <tr>
+        <th style="width:30px"></th>
+        <th>Cliente</th>
+        <th>Empresa</th>
+        <th>Contacto</th>
+        <th style="text-align:center">Productos</th>
+        <th style="text-align:right">Total c/IVA</th>
+        <th>Fecha</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in cotizaciones %}
+      <tr style="{{ 'font-weight:600;' if not c.leido }}" id="cot-{{ c.id }}" onclick="toggleDetalle({{ c.id }})" style="cursor:pointer">
+        <td style="text-align:center">{{ '🔵' if not c.leido else '⚪' }}</td>
+        <td>{{ c.nombre }}</td>
+        <td style="font-size:.82rem;color:#6b7280">{{ c.empresa or '—' }}</td>
+        <td style="font-size:.8rem">
+          {% if c.telefono %}<div>📞 {{ c.telefono }}</div>{% endif %}
+          {% if c.email    %}<div><a href="mailto:{{ c.email }}">✉ {{ c.email }}</a></div>{% endif %}
+        </td>
+        <td style="text-align:center">
+          <span class="badge badge-blue">{{ c.items|length }} item{{ 's' if c.items|length != 1 }}</span>
+        </td>
+        <td style="text-align:right;font-weight:700;color:var(--primary)">
+          ₡{{ "{:,.0f}".format(c.total_con_iva|float) if c.total_con_iva else '—' }}
+        </td>
+        <td style="font-size:.78rem;color:#9ca3af;white-space:nowrap">
+          {{ c.creado_en.strftime('%d/%m/%Y %H:%M') if c.creado_en else '' }}
+        </td>
+        <td onclick="event.stopPropagation()">
+          {% if not c.leido %}
+          <button onclick="marcarLeida({{ c.id }})" class="btn btn-ghost btn-sm">✅ Revisada</button>
+          {% endif %}
+        </td>
+      </tr>
+      <tr class="items-detail" id="det-{{ c.id }}">
+        <td colspan="8" style="padding:1rem 1.5rem">
+          <table class="items-tbl">
+            <thead><tr><th>Código</th><th>Producto</th><th style="text-align:center">Cant.</th><th style="text-align:right">P.Unit c/IVA</th><th style="text-align:right">Subtotal</th></tr></thead>
+            <tbody>
+              {% for it in c.items %}
+              {% set precio_iva = (it.precio_ref|float) * (1 + c.iva_pct / 100) %}
+              {% set subtotal   = precio_iva * (it.cantidad|int) %}
+              <tr>
+                <td style="font-family:monospace;font-size:.8rem">{{ it.codigo }}</td>
+                <td>{{ it.nombre }}</td>
+                <td style="text-align:center">{{ it.cantidad }}</td>
+                <td style="text-align:right">₡{{ "{:,.0f}".format(precio_iva) }}</td>
+                <td style="text-align:right">₡{{ "{:,.0f}".format(subtotal) }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% if c.nota %}
+          <p style="margin-top:.8rem;font-size:.85rem"><strong>Nota:</strong> {{ c.nota }}</p>
+          {% endif %}
+          <div style="text-align:right;margin-top:.5rem;font-size:.85rem;color:#6b7280">
+            Sin IVA: ₡{{ "{:,.0f}".format(c.total_sin_iva|float) if c.total_sin_iva else '—' }}
+            · IVA ({{ c.iva_pct }}%): ₡{{ "{:,.0f}".format((c.total_con_iva|float) - (c.total_sin_iva|float)) if c.total_con_iva and c.total_sin_iva else '—' }}
+            · <strong>Total: ₡{{ "{:,.0f}".format(c.total_con_iva|float) if c.total_con_iva else '—' }}</strong>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div style="text-align:center;padding:4rem;color:#9ca3af">
+    <p style="font-size:2rem;margin-bottom:.5rem">🛒</p>
+    <p>No hay solicitudes de cotización{% if filtro %} con este filtro{% endif %}.</p>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+function toggleDetalle(id) {
+  const det = document.getElementById('det-' + id);
+  det.classList.toggle('open');
+}
+async function marcarLeida(id) {
+  await fetch(`/admin/cotizaciones/${id}/leido`, { method:'POST' });
+  const row = document.getElementById('cot-' + id);
+  if (row) { row.style.fontWeight='normal'; row.cells[0].textContent='⚪'; row.cells[7].innerHTML=''; }
+}
+</script>
+{% endblock %}
