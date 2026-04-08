@@ -104,25 +104,30 @@ async def proyectos_pub(request: Request, categoria: str = Query("")):
     })
 
 @app.get("/contacto", response_class=HTMLResponse)
-async def contacto_get(request: Request):
-    cfg = get_config()
+async def contacto_get(request: Request, prod_id: int = Query(0)):
+    cfg     = get_config()
+    producto = get_producto_publico(prod_id) if prod_id else None
     return templates.TemplateResponse("public/contacto.html", {
-        "request": request, "cfg": cfg, "pagina": "contacto", "enviado": False
+        "request": request, "cfg": cfg, "pagina": "contacto",
+        "enviado": False, "producto": producto
     })
 
 @app.post("/contacto", response_class=HTMLResponse)
 async def contacto_post(request: Request,
-                        nombre:   str = Form(...),
-                        email:    str = Form(""),
-                        telefono: str = Form(""),
-                        empresa:  str = Form(""),
-                        mensaje:  str = Form(...)):
+                        nombre:       str = Form(...),
+                        email:        str = Form(""),
+                        telefono:     str = Form(""),
+                        empresa:      str = Form(""),
+                        mensaje:      str = Form(...),
+                        producto_ref: str = Form("")):
     cfg = get_config()
-    registrar_contacto(nombre, email, telefono, empresa, mensaje)
+    registrar_contacto(nombre, email, telefono, empresa, mensaje, producto_ref)
     # Notificación por correo (no bloquea si falla)
-    enviar_notificacion_contacto(nombre, email, telefono, empresa, mensaje)
+    enviar_notificacion_contacto(nombre, email, telefono, empresa,
+                                  mensaje, producto_ref)
     return templates.TemplateResponse("public/contacto.html", {
-        "request": request, "cfg": cfg, "pagina": "contacto", "enviado": True
+        "request": request, "cfg": cfg, "pagina": "contacto",
+        "enviado": True, "producto": None
     })
 
 # ── API pública (para JS si se necesita) ─────────────────────────────────────

@@ -37,9 +37,23 @@
 
 {% block content %}
 <div class="page-hero">
-  <h1>📬 Contáctenos</h1>
-  <p>Estamos listos para atenderle</p>
+  <h1>{% if producto %}🏷 Consulta sobre producto{% else %}📬 Contáctenos{% endif %}</h1>
+  <p>{% if producto %}{{ producto.nombre }}{% else %}Estamos listos para atenderle{% endif %}</p>
 </div>
+
+{% if producto %}
+<div style="background:#eff6ff;border-bottom:1px solid #bfdbfe;padding:.9rem 5%">
+  <div class="container" style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+    <span style="font-size:1.5rem">📦</span>
+    <div>
+      <div style="font-size:.78rem;color:#1e40af;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Producto consultado</div>
+      <div style="font-weight:700;color:#1e3a8a">{{ producto.nombre }}</div>
+      <div style="font-size:.8rem;color:#3b82f6">Código: {{ producto.codigo }}{% if producto.categoria %} · {{ producto.categoria }}{% endif %}</div>
+    </div>
+    <a href="/catalogo/{{ producto.id }}" style="margin-left:auto;font-size:.82rem;color:#1e40af;text-decoration:underline">← Ver ficha del producto</a>
+  </div>
+</div>
+{% endif %}
 
 <div class="contacto-layout container">
   <!-- Info de contacto -->
@@ -83,8 +97,11 @@
       <a href="/contacto" class="btn btn-primary" style="display:inline-block;margin-top:1.2rem">Enviar otro mensaje</a>
     </div>
     {% else %}
-    <h2>Envíenos un mensaje</h2>
+    <h2>{% if producto %}Solicitar información{% else %}Envíenos un mensaje{% endif %}</h2>
     <form method="post" action="/contacto">
+      {% if producto %}
+      <input type="hidden" name="producto_ref" value="{{ producto.nombre }} (Cód: {{ producto.codigo }})">
+      {% endif %}
       <div class="form-row">
         <div class="fi">
           <label>Nombre *</label>
@@ -107,9 +124,9 @@
       </div>
       <div class="fi">
         <label>Mensaje *</label>
-        <textarea name="mensaje" required placeholder="¿En qué podemos ayudarle?"></textarea>
+        <textarea name="mensaje" required placeholder="¿En qué podemos ayudarle?">{% if producto %}Hola, estoy interesado en el producto "{{ producto.nombre }}" (Código: {{ producto.codigo }}) y me gustaría recibir más información / cotización. {% endif %}</textarea>
       </div>
-      <button type="submit" class="submit-btn">Enviar mensaje →</button>
+      <button type="submit" class="submit-btn">{% if producto %}Enviar solicitud →{% else %}Enviar mensaje →{% endif %}</button>
     </form>
     {% endif %}
   </div>

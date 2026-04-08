@@ -41,11 +41,13 @@ def get_categorias_publico() -> list:
     return [r["categoria"] for r in rows]
 
 
-def registrar_contacto(nombre, email, telefono, empresa, mensaje) -> dict:
+def registrar_contacto(nombre, email, telefono, empresa, mensaje,
+                       producto_ref="") -> dict:
     return execute("""
-        INSERT INTO contacto (nombre, email, telefono, empresa, mensaje)
-        VALUES (%s,%s,%s,%s,%s) RETURNING id
-    """, (nombre, email or None, telefono or None, empresa or None, mensaje),
+        INSERT INTO contacto (nombre, email, telefono, empresa, mensaje, producto_ref)
+        VALUES (%s,%s,%s,%s,%s,%s) RETURNING id
+    """, (nombre, email or None, telefono or None, empresa or None,
+          mensaje, producto_ref or None),
          returning=True)
 
 

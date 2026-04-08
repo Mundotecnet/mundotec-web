@@ -23,6 +23,7 @@
         <th>Nombre</th>
         <th>Empresa</th>
         <th>Teléfono / Email</th>
+        <th>Producto consultado</th>
         <th>Mensaje</th>
         <th>Fecha</th>
         <th></th>
@@ -38,8 +39,17 @@
           {% if m.telefono %}<div>📞 {{ m.telefono }}</div>{% endif %}
           {% if m.email    %}<div><a href="mailto:{{ m.email }}">✉ {{ m.email }}</a></div>{% endif %}
         </td>
-        <td style="max-width:280px;font-size:.85rem;color:#374151">
-          <span title="{{ m.mensaje }}">{{ m.mensaje[:100] }}{% if m.mensaje|length > 100 %}…{% endif %}</span>
+        <td style="font-size:.82rem;max-width:180px">
+          {% if m.producto_ref %}
+            <span style="display:inline-flex;align-items:center;gap:.3rem;background:#eff6ff;color:#1e40af;padding:3px 8px;border-radius:20px;font-weight:600;font-size:.75rem">
+              🏷 {{ m.producto_ref[:60] }}{% if m.producto_ref|length > 60 %}…{% endif %}
+            </span>
+          {% else %}
+            <span style="color:#d1d5db">—</span>
+          {% endif %}
+        </td>
+        <td style="max-width:240px;font-size:.85rem;color:#374151">
+          <span title="{{ m.mensaje }}">{{ m.mensaje[:80] }}{% if m.mensaje|length > 80 %}…{% endif %}</span>
         </td>
         <td style="font-size:.78rem;color:#9ca3af;white-space:nowrap">{{ m.creado_en.strftime('%d/%m/%Y %H:%M') if m.creado_en else '' }}</td>
         <td>

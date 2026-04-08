@@ -190,6 +190,18 @@ server {
 
 ## BITÁCORA DE CAMBIOS
 
+### [SESIÓN 2] — 2026-04-07 — Notificaciones por email + formulario de contacto
+
+| # | Tipo | Descripción |
+|---|------|-------------|
+| 1 | Nuevo | Módulo `notificaciones.py` — envío de email SMTP al recibir formulario de contacto |
+| 2 | Mejora | Config SMTP manejada desde panel admin `/admin/configuracion` (sin reiniciar) |
+| 3 | Mejora | Soporta Gmail port 587 TLS y SMTP SSL port 465 |
+| 4 | Mejora | Fallo en SMTP no bloquea — mensaje siempre queda guardado en BD |
+| 5 | Mejora | DDL actualizado: nuevas claves `smtp_host/port/user/password/from`, `notif_to` en `site_config` |
+
+---
+
 ### [SESIÓN 1] — 2026-04-08 — Implementación inicial
 
 | # | Tipo | Descripción |

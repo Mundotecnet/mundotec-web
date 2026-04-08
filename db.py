@@ -53,15 +53,18 @@ CREATE TABLE IF NOT EXISTS catalogo_specs (
 );
 
 CREATE TABLE IF NOT EXISTS contacto (
-    id        SERIAL PRIMARY KEY,
-    nombre    VARCHAR(150) NOT NULL,
-    email     VARCHAR(200),
-    telefono  VARCHAR(30),
-    empresa   VARCHAR(150),
-    mensaje   TEXT         NOT NULL,
-    creado_en TIMESTAMP    DEFAULT NOW(),
-    leido     BOOLEAN      DEFAULT FALSE
+    id           SERIAL PRIMARY KEY,
+    nombre       VARCHAR(150) NOT NULL,
+    email        VARCHAR(200),
+    telefono     VARCHAR(30),
+    empresa      VARCHAR(150),
+    mensaje      TEXT         NOT NULL,
+    producto_ref VARCHAR(300),
+    creado_en    TIMESTAMP    DEFAULT NOW(),
+    leido        BOOLEAN      DEFAULT FALSE
 );
+
+ALTER TABLE contacto ADD COLUMN IF NOT EXISTS producto_ref VARCHAR(300);
 
 -- Datos iniciales de configuración
 INSERT INTO site_config (clave, valor) VALUES
