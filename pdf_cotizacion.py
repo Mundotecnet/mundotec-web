@@ -14,6 +14,35 @@ from reportlab.lib.enums import TA_RIGHT, TA_CENTER, TA_LEFT
 from reportlab.platypus import (SimpleDocTemplate, Table, TableStyle,
                                  Paragraph, Spacer, HRFlowable, Image as RLImage,
                                  KeepTogether)
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+
+# ── Registro de fuentes Unicode (DejaVu soporta el símbolo ₡) ────────────────
+_FONT_DIRS = [
+    "/usr/share/fonts/truetype/dejavu",          # Ubuntu / Debian
+    "/usr/share/fonts/dejavu",                   # otras distros Linux
+    "/System/Library/Fonts",                      # macOS (fallback)
+]
+
+def _find_font(filename: str) -> str | None:
+    for d in _FONT_DIRS:
+        path = os.path.join(d, filename)
+        if os.path.exists(path):
+            return path
+    return None
+
+_regular = _find_font("DejaVuSans.ttf")
+_bold    = _find_font("DejaVuSans-Bold.ttf")
+
+if _regular and _bold:
+    pdfmetrics.registerFont(TTFont("MW",     _regular))
+    pdfmetrics.registerFont(TTFont("MW-Bold", _bold))
+    FONT_NORMAL = "MW"
+    FONT_BOLD   = "MW-Bold"
+else:
+    # Fallback: Helvetica no muestra ₡ pero no rompe el PDF
+    FONT_NORMAL = "Helvetica"
+    FONT_BOLD   = "Helvetica-Bold"
 
 # ── Datos fijos de la empresa ──────────────────────────────────────────────────
 EMPRESA = {
@@ -81,7 +110,7 @@ def generar_pdf_cotizacion(cot: dict, cfg: dict) -> bytes:
 
     # ── Helper de estilos ─────────────────────────────────────────────────────
     def sty(**kw):
-        d = dict(fontName="Helvetica", fontSize=9, leading=13,
+        d = dict(fontName=FONT_NORMAL, fontSize=9, leading=13,
                  textColor=colors.HexColor("#1a1a2e"))
         d.update(kw)
         return ParagraphStyle("_", **d)
@@ -105,7 +134,7 @@ def generar_pdf_cotizacion(cot: dict, cfg: dict) -> bytes:
         col_logo = logo_img
     else:
         col_logo = p(EMPRESA["razon_social"],
-                     sty(fontName="Helvetica-Bold", fontSize=18, textColor=c_primary))
+                     sty(fontName=FONT_BOLD, fontSize=18, textColor=c_primary))
 
     empresa_info = (
         f"<b>{EMPRESA['razon_social']}</b><br/>"
@@ -121,7 +150,7 @@ def generar_pdf_cotizacion(cot: dict, cfg: dict) -> bytes:
         f"<b>COTIZACIÓN</b><br/>"
         f"<font size='11'>{num_cot}</font><br/>"
         f"<font size='8' color='#6B7280'>Fecha: {fecha_str}</font>",
-        sty(fontName="Helvetica-Bold", fontSize=16, textColor=c_primary,
+        sty(fontName=FONT_BOLD, fontSize=16, textColor=c_primary,
             alignment=TA_RIGHT, leading=20)
     )
 
@@ -148,7 +177,7 @@ def generar_pdf_cotizacion(cot: dict, cfg: dict) -> bytes:
     # DATOS DEL CLIENTE
     # ═══════════════════════════════════════════════════════════════════════════
     story.append(p("DATOS DEL CLIENTE",
-                   sty(fontName="Helvetica-Bold", fontSize=7.5,
+                   sty(fontName=FONT_BOLD, fontSize=7.5,
                        textColor=c_gray, spaceAfter=4)))
 
     cliente_rows = []
@@ -160,7 +189,7 @@ def generar_pdf_cotizacion(cot: dict, cfg: dict) -> bytes:
     if cliente_rows:
         ct = Table(cliente_rows, colWidths=[2.8*cm, 14.7*cm])
         ct.setStyle(TableStyle([
-            ("FONTNAME",      (0,0), (0,-1), "Helvetica-Bold"),
+            ("FONTNAME",      (0,0), (0,-1), FONT_BOLD),
             ("FONTSIZE",      (0,0), (-1,-1), 8.5),
             ("TEXTCOLOR",     (0,0), (0,-1), c_gray),
             ("BACKGROUND",    (0,0), (-1,-1), c_light),
@@ -177,10 +206,10 @@ def generar_pdf_cotizacion(cot: dict, cfg: dict) -> bytes:
     # TABLA DE PRODUCTOS
     # ═══════════════════════════════════════════════════════════════════════════
     story.append(p("DETALLE DE PRODUCTOS",
-                   sty(fontName="Helvetica-Bold", fontSize=7.5,
+                   sty(fontName=FONT_BOLD, fontSize=7.5,
                        textColor=c_gray, spaceAfter=4)))
 
-    th = sty(fontName="Helvetica-Bold", fontSize=7.5,
+    th = sty(fontName=FONT_BOLD, fontSize=7.5,
               textColor=c_white, alignment=TA_CENTER)
 
     rows = [[
@@ -197,7 +226,7 @@ def generar_pdf_cotizacion(cot: dict, cfg: dict) -> bytes:
         qty     = int(it.get("cantidad", 1))
         sub     = p_iva_u * qty
         rows.append([
-            p(it.get("codigo", ""), sty(fontSize=7.5, fontName="Helvetica-Bold")),
+            p(it.get("codigo", ""), sty(fontSize=7.5, fontName=FONT_BOLD)),
             p(it.get("nombre",  ""), sty(fontSize=8, leading=11)),
             p(str(qty),              sty(fontSize=8, alignment=TA_CENTER)),
             p(fmt(p_ref),            sty(fontSize=8, alignment=TA_RIGHT)),
@@ -205,7 +234,7 @@ def generar_pdf_cotizacion(cot: dict, cfg: dict) -> bytes:
                                          textColor=colors.HexColor("#E67E22"))),
             p(fmt(p_iva_u),          sty(fontSize=8, alignment=TA_RIGHT)),
             p(fmt(sub),              sty(fontSize=8, alignment=TA_RIGHT,
-                                         fontName="Helvetica-Bold")),
+                                         fontName=FONT_BOLD)),
         ])
 
     items_t = Table(rows, colWidths=[2.3*cm, 5.5*cm, 1.2*cm, 2.5*cm, 1.8*cm, 2.5*cm, 2.5*cm],
@@ -231,9 +260,9 @@ def generar_pdf_cotizacion(cot: dict, cfg: dict) -> bytes:
     iva_sum = con_iva - sin_iva
 
     totals_t = Table([
-        [p(""), p("Subtotal sin IVA:", sty(fontName="Helvetica-Bold", fontSize=9,  alignment=TA_RIGHT)), p(fmt(sin_iva), sty(fontSize=9,  alignment=TA_RIGHT))],
-        [p(""), p(f"IVA ({iva_pct})%:", sty(fontName="Helvetica-Bold", fontSize=9,  alignment=TA_RIGHT)), p(fmt(iva_sum), sty(fontSize=9,  alignment=TA_RIGHT))],
-        [p(""), p("TOTAL:",             sty(fontName="Helvetica-Bold", fontSize=13, alignment=TA_RIGHT, textColor=c_primary)), p(fmt(con_iva), sty(fontName="Helvetica-Bold", fontSize=13, alignment=TA_RIGHT, textColor=c_primary))],
+        [p(""), p("Subtotal sin IVA:", sty(fontName=FONT_BOLD, fontSize=9,  alignment=TA_RIGHT)), p(fmt(sin_iva), sty(fontSize=9,  alignment=TA_RIGHT))],
+        [p(""), p(f"IVA ({iva_pct})%:", sty(fontName=FONT_BOLD, fontSize=9,  alignment=TA_RIGHT)), p(fmt(iva_sum), sty(fontSize=9,  alignment=TA_RIGHT))],
+        [p(""), p("TOTAL:",             sty(fontName=FONT_BOLD, fontSize=13, alignment=TA_RIGHT, textColor=c_primary)), p(fmt(con_iva), sty(fontName=FONT_BOLD, fontSize=13, alignment=TA_RIGHT, textColor=c_primary))],
     ], colWidths=[10.5*cm, 4.5*cm, 2.5*cm])
     totals_t.setStyle(TableStyle([
         ("LINEABOVE",     (1,2), (2,2), 1.5, c_primary),
@@ -249,7 +278,7 @@ def generar_pdf_cotizacion(cot: dict, cfg: dict) -> bytes:
     if cot.get("nota"):
         story.append(Spacer(1, 12))
         story.append(p("NOTA ADICIONAL:",
-                       sty(fontName="Helvetica-Bold", fontSize=7.5,
+                       sty(fontName=FONT_BOLD, fontSize=7.5,
                            textColor=c_gray, spaceAfter=4)))
         nota_t = Table([[p(cot["nota"])]], colWidths=[17.5*cm])
         nota_t.setStyle(TableStyle([
@@ -270,20 +299,20 @@ def generar_pdf_cotizacion(cot: dict, cfg: dict) -> bytes:
 
     story.append(KeepTogether([
         p("INFORMACIÓN DE PAGO — CUENTAS BANCARIAS",
-          sty(fontName="Helvetica-Bold", fontSize=8, textColor=c_primary, spaceAfter=6)),
+          sty(fontName=FONT_BOLD, fontSize=8, textColor=c_primary, spaceAfter=6)),
 
         Table(
             [
                 # Header
-                [p("Banco",        sty(fontName="Helvetica-Bold", fontSize=7.5, textColor=c_white, alignment=TA_CENTER)),
-                 p("N° de Cuenta", sty(fontName="Helvetica-Bold", fontSize=7.5, textColor=c_white, alignment=TA_CENTER)),
-                 p("IBAN",         sty(fontName="Helvetica-Bold", fontSize=7.5, textColor=c_white, alignment=TA_CENTER)),
-                 p("Moneda",       sty(fontName="Helvetica-Bold", fontSize=7.5, textColor=c_white, alignment=TA_CENTER))],
+                [p("Banco",        sty(fontName=FONT_BOLD, fontSize=7.5, textColor=c_white, alignment=TA_CENTER)),
+                 p("N° de Cuenta", sty(fontName=FONT_BOLD, fontSize=7.5, textColor=c_white, alignment=TA_CENTER)),
+                 p("IBAN",         sty(fontName=FONT_BOLD, fontSize=7.5, textColor=c_white, alignment=TA_CENTER)),
+                 p("Moneda",       sty(fontName=FONT_BOLD, fontSize=7.5, textColor=c_white, alignment=TA_CENTER))],
             ] + [
-                [p(banco,   sty(fontSize=7.5, fontName="Helvetica-Bold")),
-                 p(cuenta,  sty(fontSize=7.5, fontName="Helvetica", alignment=TA_CENTER)),
-                 p(iban,    sty(fontSize=7,   fontName="Helvetica", textColor=c_gray)),
-                 p(moneda,  sty(fontSize=7.5, fontName="Helvetica", alignment=TA_CENTER))]
+                [p(banco,   sty(fontSize=7.5, fontName=FONT_BOLD)),
+                 p(cuenta,  sty(fontSize=7.5, fontName=FONT_NORMAL, alignment=TA_CENTER)),
+                 p(iban,    sty(fontSize=7,   fontName=FONT_NORMAL, textColor=c_gray)),
+                 p(moneda,  sty(fontSize=7.5, fontName=FONT_NORMAL, alignment=TA_CENTER))]
                 for banco, cuenta, iban, moneda in CUENTAS_BANCARIAS
             ],
             colWidths=[3.5*cm, 4.5*cm, 7*cm, 2.5*cm],
@@ -294,12 +323,12 @@ def generar_pdf_cotizacion(cot: dict, cfg: dict) -> bytes:
     # Estilo de la tabla de cuentas (aplicado después de construirla)
     # Re-crear con estilo
     cuentas_rows = [
-        [p("Banco",        sty(fontName="Helvetica-Bold", fontSize=7.5, textColor=c_white, alignment=TA_CENTER)),
-         p("N° de Cuenta", sty(fontName="Helvetica-Bold", fontSize=7.5, textColor=c_white, alignment=TA_CENTER)),
-         p("IBAN",         sty(fontName="Helvetica-Bold", fontSize=7.5, textColor=c_white, alignment=TA_CENTER)),
-         p("Moneda",       sty(fontName="Helvetica-Bold", fontSize=7.5, textColor=c_white, alignment=TA_CENTER))],
+        [p("Banco",        sty(fontName=FONT_BOLD, fontSize=7.5, textColor=c_white, alignment=TA_CENTER)),
+         p("N° de Cuenta", sty(fontName=FONT_BOLD, fontSize=7.5, textColor=c_white, alignment=TA_CENTER)),
+         p("IBAN",         sty(fontName=FONT_BOLD, fontSize=7.5, textColor=c_white, alignment=TA_CENTER)),
+         p("Moneda",       sty(fontName=FONT_BOLD, fontSize=7.5, textColor=c_white, alignment=TA_CENTER))],
     ] + [
-        [p(banco,  sty(fontSize=7.5, fontName="Helvetica-Bold")),
+        [p(banco,  sty(fontSize=7.5, fontName=FONT_BOLD)),
          p(cuenta, sty(fontSize=7.5, alignment=TA_CENTER)),
          p(iban,   sty(fontSize=7,   textColor=c_gray)),
          p(moneda, sty(fontSize=7.5, alignment=TA_CENTER))]
@@ -321,7 +350,7 @@ def generar_pdf_cotizacion(cot: dict, cfg: dict) -> bytes:
     # Reemplazar el KeepTogether con la versión con estilo correcto
     story[-1] = KeepTogether([
         p("INFORMACIÓN DE PAGO — CUENTAS BANCARIAS",
-          sty(fontName="Helvetica-Bold", fontSize=8, textColor=c_primary, spaceAfter=6)),
+          sty(fontName=FONT_BOLD, fontSize=8, textColor=c_primary, spaceAfter=6)),
         cuentas_t,
     ])
 
