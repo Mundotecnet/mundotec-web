@@ -261,9 +261,9 @@ def generar_pdf_cotizacion(cot: dict, cfg: dict) -> bytes:
 
     totals_t = Table([
         [p(""), p("Subtotal sin IVA:", sty(fontName=FONT_BOLD, fontSize=9,  alignment=TA_RIGHT)), p(fmt(sin_iva), sty(fontSize=9,  alignment=TA_RIGHT))],
-        [p(""), p(f"IVA ({iva_pct})%:", sty(fontName=FONT_BOLD, fontSize=9,  alignment=TA_RIGHT)), p(fmt(iva_sum), sty(fontSize=9,  alignment=TA_RIGHT))],
+        [p(""), p(f"IVA ({iva_pct}%):", sty(fontName=FONT_BOLD, fontSize=9,  alignment=TA_RIGHT)), p(fmt(iva_sum), sty(fontSize=9,  alignment=TA_RIGHT))],
         [p(""), p("TOTAL:",             sty(fontName=FONT_BOLD, fontSize=13, alignment=TA_RIGHT, textColor=c_primary)), p(fmt(con_iva), sty(fontName=FONT_BOLD, fontSize=13, alignment=TA_RIGHT, textColor=c_primary))],
-    ], colWidths=[10.5*cm, 4.5*cm, 2.5*cm])
+    ], colWidths=[9.5*cm, 4.5*cm, 3.5*cm])
     totals_t.setStyle(TableStyle([
         ("LINEABOVE",     (1,2), (2,2), 1.5, c_primary),
         ("TOPPADDING",    (0,0), (-1,-1), 3),
