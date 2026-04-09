@@ -71,7 +71,7 @@
           <table class="items-tbl">
             <thead><tr><th>Código</th><th>Producto</th><th style="text-align:center">Cant.</th><th style="text-align:right">P.Unit c/IVA</th><th style="text-align:right">Subtotal</th></tr></thead>
             <tbody>
-              {% for it in c.items %}
+              {% for it in c['items'] %}
               {% set precio_iva = (it.precio_ref|float) * (1 + c.iva_pct / 100) %}
               {% set subtotal   = precio_iva * (it.cantidad|int) %}
               <tr>
