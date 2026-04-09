@@ -1,0 +1,107 @@
+{% extends "admin/base.html" %}
+{% block title %}Proceso — Pedidos{% endblock %}
+{% block topbar_title %}⚡ Proceso de compras{% endblock %}
+
+{% block content %}
+<!-- Stats -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="num">{{ stats.total }}</div>
+    <div class="lbl">Total pedidos</div>
+  </div>
+  <div class="stat-card" style="border-color:#f59e0b">
+    <div class="num" style="color:#b45309">{{ stats.pendientes }}</div>
+    <div class="lbl">Pendientes</div>
+  </div>
+  <div class="stat-card" style="border-color:#3b82f6">
+    <div class="num" style="color:#1d4ed8">{{ stats.link_enviados }}</div>
+    <div class="lbl">Link enviado</div>
+  </div>
+  <div class="stat-card" style="border-color:#10b981">
+    <div class="num" style="color:#065f46">{{ stats.pagados }}</div>
+    <div class="lbl">Pagados</div>
+  </div>
+</div>
+
+<!-- Filtros -->
+<div class="card" style="padding:1rem 1.5rem;margin-bottom:1.2rem">
+  <div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center">
+    <span style="font-size:.8rem;font-weight:600;color:var(--gray)">Filtrar:</span>
+    {% set estados = [('', 'Todos'), ('pendiente', 'Pendientes'), ('en_proceso', 'En proceso'), ('link_enviado', 'Link enviado'), ('pagado', 'Pagado'), ('cancelado', 'Cancelado')] %}
+    {% for val, lbl in estados %}
+    <a href="/admin/pedidos{% if val %}?estado={{ val }}{% endif %}"
+       style="padding:5px 14px;border-radius:20px;font-size:.78rem;font-weight:600;text-decoration:none;
+              background:{{ '#1E4E8C' if filtro==val else '#f3f4f6' }};
+              color:{{ '#fff' if filtro==val else '#374151' }}">{{ lbl }}</a>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Tabla -->
+<div class="card" style="padding:0;overflow:hidden">
+  {% if pedidos %}
+  <table class="tbl">
+    <thead>
+      <tr>
+        <th>Pedido</th>
+        <th>Tipo</th>
+        <th>Cliente</th>
+        <th>Productos</th>
+        <th>Total c/IVA</th>
+        <th>Estado</th>
+        <th>Fecha</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for p in pedidos %}
+    {% set tipo_lbl = 'Factura' if p.tipo_factura == 'factura' else 'Ticket' %}
+    {% set estado_badge = {
+        'pendiente':    'badge-orange',
+        'en_proceso':   'badge-blue',
+        'link_enviado': 'badge-blue',
+        'pagado':       'badge-green',
+        'cancelado':    'badge-red'
+    }.get(p.estado, 'badge-gray') %}
+    {% set estado_lbl = {
+        'pendiente':    'Pendiente',
+        'en_proceso':   'En proceso',
+        'link_enviado': 'Link enviado',
+        'pagado':       'Pagado',
+        'cancelado':    'Cancelado'
+    }.get(p.estado, p.estado) %}
+    <tr>
+      <td><strong style="color:var(--primary)">{{ p.num_pedido or '#'+p.id|string }}</strong></td>
+      <td><span class="badge {{ 'badge-blue' if p.tipo_factura=='factura' else 'badge-gray' }}">{{ tipo_lbl }}</span></td>
+      <td>
+        <div style="font-weight:600">{{ p.nombre }}</div>
+        {% if p.email %}<div style="font-size:.75rem;color:var(--gray)">{{ p.email }}</div>{% endif %}
+        {% if p.telefono %}<div style="font-size:.75rem;color:var(--gray)">{{ p.telefono }}</div>{% endif %}
+      </td>
+      <td style="font-size:.85rem">
+        {% if p.items %}
+          {{ p.items|length }} producto{{ 's' if p.items|length != 1 }}
+        {% else %}—{% endif %}
+      </td>
+      <td style="font-weight:700;color:var(--primary)">
+        {% if p.total_con_iva %}₡{{ "{:,.0f}".format(p.total_con_iva) }}{% else %}—{% endif %}
+      </td>
+      <td><span class="badge {{ estado_badge }}">{{ estado_lbl }}</span></td>
+      <td style="font-size:.8rem;color:var(--gray)">
+        {{ p.creado_en.strftime('%d/%m/%Y %H:%M') if p.creado_en else '—' }}
+      </td>
+      <td>
+        <a href="/admin/pedidos/{{ p.id }}" class="btn btn-sm btn-outline">Ver →</a>
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div style="text-align:center;padding:4rem;color:var(--gray)">
+    <div style="font-size:2.5rem;margin-bottom:.8rem">📭</div>
+    <p>No hay pedidos{% if filtro %} con estado "{{ filtro }}"{% endif %}.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

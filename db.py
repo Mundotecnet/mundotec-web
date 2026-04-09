@@ -81,6 +81,29 @@ CREATE TABLE IF NOT EXISTS cotizaciones (
 
 ALTER TABLE contacto ADD COLUMN IF NOT EXISTS producto_ref VARCHAR(300);
 
+CREATE TABLE IF NOT EXISTS pedidos (
+    id              SERIAL PRIMARY KEY,
+    num_pedido      VARCHAR(20) UNIQUE,
+    tipo_factura    VARCHAR(20)  NOT NULL DEFAULT 'ticket',  -- 'ticket' | 'factura'
+    nombre          VARCHAR(200) NOT NULL,
+    email           VARCHAR(200),
+    telefono        VARCHAR(30),
+    cedula          VARCHAR(30),
+    direccion       TEXT,
+    cod_actividad   VARCHAR(20),
+    items           TEXT         NOT NULL,
+    total_sin_iva   NUMERIC(15,2),
+    total_con_iva   NUMERIC(15,2),
+    iva_pct         INT          DEFAULT 13,
+    nota_cliente    TEXT,
+    estado          VARCHAR(30)  DEFAULT 'pendiente',
+    link_pago       TEXT,
+    nota_vendedor   TEXT,
+    leido           BOOLEAN      DEFAULT FALSE,
+    creado_en       TIMESTAMP    DEFAULT NOW(),
+    actualizado_en  TIMESTAMP    DEFAULT NOW()
+);
+
 -- Datos iniciales de configuración
 INSERT INTO site_config (clave, valor) VALUES
     ('empresa_nombre',         'MUNDOTEC'),

@@ -77,6 +77,7 @@
     <div class="resumen-row"><span>IVA ({{ iva }}%)</span><span id="sumIva">₡0</span></div>
     <div class="resumen-total"><span>TOTAL</span><span id="sumTotal">₡0</span></div>
     <button class="cotizar-btn" onclick="abrirModal()">💬 Solicitar cotización</button>
+    <button class="cotizar-btn" onclick="abrirModalPedido()" style="background:var(--primary);margin-top:.6rem">🛒 Tramitar compra</button>
     <a href="/catalogo" style="display:block;text-align:center;margin-top:.8rem;font-size:.83rem;color:var(--gray)">← Seguir agregando productos</a>
   </div>
 </div>
@@ -104,6 +105,54 @@
       <h4 style="margin-bottom:.5rem;color:#065f46">¡Solicitud enviada!</h4>
       <p style="color:#047857;font-size:.9rem">Le responderemos a la brevedad con su cotización.</p>
       <button onclick="cerrarModal();location.href='/catalogo'" style="margin-top:1.2rem;padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600">Seguir comprando</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Tramitar Compra -->
+<div class="modal-overlay" id="modalPedido">
+  <div class="modal-box">
+    <h3>🛒 Tramitar compra</h3>
+    <p style="font-size:.85rem;color:#6b7280;margin-bottom:1.2rem">Indique el tipo de factura y sus datos. Un vendedor verificará disponibilidad y le enviará el link de pago.</p>
+    <div id="pedForm">
+      <!-- Tipo de factura -->
+      <div class="fi" style="margin-bottom:1rem">
+        <label>Tipo de factura *</label>
+        <div style="display:flex;gap:.8rem">
+          <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;font-weight:400;font-size:.9rem">
+            <input type="radio" name="tipoFactura" value="ticket" checked onchange="toggleFacturaFields()"> Ticket Electrónico
+          </label>
+          <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;font-weight:400;font-size:.9rem">
+            <input type="radio" name="tipoFactura" value="factura" onchange="toggleFacturaFields()"> Factura Electrónica
+          </label>
+        </div>
+      </div>
+
+      <!-- Campos comunes -->
+      <div class="fi"><label>Nombre *</label><input type="text" id="pNombre" required placeholder="Su nombre completo"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem">
+        <div class="fi"><label>Teléfono</label><input type="tel" id="pTelefono" placeholder="8888-0000"></div>
+        <div class="fi"><label>Correo</label><input type="email" id="pEmail" placeholder="correo@ejemplo.com"></div>
+      </div>
+
+      <!-- Campos sólo Factura Electrónica -->
+      <div id="camposFactura" style="display:none">
+        <div class="fi"><label>Cédula / RUC *</label><input type="text" id="pCedula" placeholder="1-1234-5678"></div>
+        <div class="fi"><label>Dirección *</label><input type="text" id="pDireccion" placeholder="Provincia, cantón, dirección exacta"></div>
+        <div class="fi"><label>Código de actividad económica</label><input type="text" id="pCodActividad" placeholder="Ej: 4651.0"></div>
+      </div>
+
+      <div class="fi"><label>Nota para el vendedor</label><textarea id="pNota" rows="2" placeholder="Urgencia, consultas, etc."></textarea></div>
+      <div style="display:flex;gap:.8rem;margin-top:1rem">
+        <button onclick="cerrarModalPedido()" style="flex:1;padding:11px;border:1.5px solid #d1d5db;border-radius:8px;background:#fff;cursor:pointer;font-weight:600">Cancelar</button>
+        <button onclick="enviarPedido()" style="flex:2;padding:11px;background:var(--primary);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:.95rem">Enviar pedido →</button>
+      </div>
+    </div>
+    <div id="pedSuccess" style="display:none;text-align:center;padding:1.5rem 0">
+      <div style="font-size:3rem;margin-bottom:.8rem">✅</div>
+      <h4 style="margin-bottom:.5rem;color:#065f46">¡Pedido recibido!</h4>
+      <p id="pedSuccessMsg" style="color:#047857;font-size:.9rem">Un vendedor verificará disponibilidad y le enviará el link de pago.</p>
+      <button onclick="cerrarModalPedido();location.href='/catalogo'" style="margin-top:1.2rem;padding:10px 24px;background:var(--primary);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600">Seguir comprando</button>
     </div>
   </div>
 </div>
@@ -259,5 +308,71 @@ async function enviarCotizacion() {
 }
 
 document.addEventListener('DOMContentLoaded', () => { renderCart(); updateNavBadge(); });
+
+// ── Tramitar Compra ──────────────────────────────────────────────────────────
+function abrirModalPedido()  { document.getElementById('modalPedido').classList.add('open'); }
+function cerrarModalPedido() {
+  document.getElementById('modalPedido').classList.remove('open');
+  document.getElementById('pedForm').style.display = 'block';
+  document.getElementById('pedSuccess').style.display = 'none';
+}
+
+function toggleFacturaFields() {
+  const tipo = document.querySelector('input[name="tipoFactura"]:checked').value;
+  document.getElementById('camposFactura').style.display = tipo === 'factura' ? 'block' : 'none';
+}
+
+async function enviarPedido() {
+  const nombre = document.getElementById('pNombre').value.trim();
+  if (!nombre) { alert('Ingrese su nombre.'); return; }
+
+  const tipo = document.querySelector('input[name="tipoFactura"]:checked').value;
+  if (tipo === 'factura') {
+    if (!document.getElementById('pCedula').value.trim())   { alert('Ingrese la cédula/RUC.'); return; }
+    if (!document.getElementById('pDireccion').value.trim()){ alert('Ingrese la dirección.'); return; }
+  }
+
+  const cart        = getCart();
+  const sinIva      = cart.reduce((s,i) => s + (parseFloat(i.precio_ref)||0)*i.cantidad, 0);
+  const conIva      = sinIva * (1 + IVA_PCT/100);
+  const btn         = document.querySelector('#pedForm button:last-child');
+  btn.textContent   = '⏳ Enviando...';
+  btn.disabled      = true;
+
+  const r = await fetch('/carrito/pedido', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      tipo_factura:  tipo,
+      nombre,
+      email:         document.getElementById('pEmail').value,
+      telefono:      document.getElementById('pTelefono').value,
+      cedula:        tipo === 'factura' ? document.getElementById('pCedula').value : '',
+      direccion:     tipo === 'factura' ? document.getElementById('pDireccion').value : '',
+      cod_actividad: tipo === 'factura' ? document.getElementById('pCodActividad').value : '',
+      nota_cliente:  document.getElementById('pNota').value,
+      items:         cart,
+      total_sin_iva: sinIva,
+      total_con_iva: conIva,
+      iva_pct:       IVA_PCT
+    })
+  });
+
+  if (r.ok) {
+    const res = await r.json().catch(() => ({}));
+    saveCart([]);
+    document.getElementById('pedForm').style.display = 'none';
+    const msg = document.getElementById('pedSuccessMsg');
+    if (res.num_pedido) {
+      msg.innerHTML = `Su pedido quedó registrado con el número <strong>${res.num_pedido}</strong>.<br>
+        Un vendedor verificará disponibilidad y le enviará el link de pago a su correo.`;
+    }
+    document.getElementById('pedSuccess').style.display = 'block';
+  } else {
+    btn.textContent = 'Enviar pedido →';
+    btn.disabled    = false;
+    alert('Error al enviar. Intente de nuevo.');
+  }
+}
 </script>
 {% endblock %}

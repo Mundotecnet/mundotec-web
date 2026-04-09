@@ -1,0 +1,163 @@
+{% extends "admin/base.html" %}
+{% block title %}Pedido {{ ped.num_pedido }}{% endblock %}
+{% block topbar_title %}⚡ Pedido {{ ped.num_pedido }}{% endblock %}
+{% block topbar_actions %}
+  <a href="/admin/pedidos" class="btn btn-ghost btn-sm">← Volver a Proceso</a>
+{% endblock %}
+
+{% block content %}
+{% set tipo_lbl = 'Factura Electrónica' if ped.tipo_factura == 'factura' else 'Ticket Electrónico' %}
+{% set estado_badge = {
+    'pendiente':    'badge-orange',
+    'en_proceso':   'badge-blue',
+    'link_enviado': 'badge-blue',
+    'pagado':       'badge-green',
+    'cancelado':    'badge-red'
+}.get(ped.estado, 'badge-gray') %}
+{% set estado_lbl = {
+    'pendiente':    'Pendiente',
+    'en_proceso':   'En proceso',
+    'link_enviado': 'Link enviado',
+    'pagado':       'Pagado',
+    'cancelado':    'Cancelado'
+}.get(ped.estado, ped.estado) %}
+
+<div style="display:grid;grid-template-columns:1fr 340px;gap:1.5rem;align-items:start">
+
+  <!-- Columna principal -->
+  <div>
+    <!-- Datos del cliente -->
+    <div class="card">
+      <div class="card-title">👤 Datos del cliente
+        <span class="badge {{ 'badge-blue' if ped.tipo_factura=='factura' else 'badge-gray' }}" style="margin-left:.5rem">{{ tipo_lbl }}</span>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:.9rem">
+        <tr><td style="padding:6px 0;color:var(--gray);width:160px"><strong>Nombre:</strong></td><td><strong>{{ ped.nombre }}</strong></td></tr>
+        {% if ped.email %}<tr><td style="padding:6px 0;color:var(--gray)"><strong>Email:</strong></td><td><a href="mailto:{{ ped.email }}">{{ ped.email }}</a></td></tr>{% endif %}
+        {% if ped.telefono %}<tr><td style="padding:6px 0;color:var(--gray)"><strong>Teléfono:</strong></td><td><a href="tel:{{ ped.telefono }}">{{ ped.telefono }}</a></td></tr>{% endif %}
+        {% if ped.cedula %}<tr><td style="padding:6px 0;color:var(--gray)"><strong>Cédula/RUC:</strong></td><td>{{ ped.cedula }}</td></tr>{% endif %}
+        {% if ped.direccion %}<tr><td style="padding:6px 0;color:var(--gray)"><strong>Dirección:</strong></td><td>{{ ped.direccion }}</td></tr>{% endif %}
+        {% if ped.cod_actividad %}<tr><td style="padding:6px 0;color:var(--gray)"><strong>Cód. Actividad:</strong></td><td>{{ ped.cod_actividad }}</td></tr>{% endif %}
+        {% if ped.nota_cliente %}<tr><td style="padding:6px 0;color:var(--gray)"><strong>Nota cliente:</strong></td><td style="font-style:italic">{{ ped.nota_cliente }}</td></tr>{% endif %}
+      </table>
+    </div>
+
+    <!-- Productos -->
+    <div class="card">
+      <div class="card-title">📦 Productos del pedido</div>
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Código</th>
+            <th>Producto</th>
+            <th style="text-align:center">Cant.</th>
+            <th style="text-align:right">P.Unit c/IVA</th>
+            <th style="text-align:right">Subtotal</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for it in ped.items %}
+        {% set pref = it.precio_ref|float %}
+        {% set piva = pref * (1 + ped.iva_pct / 100) %}
+        {% set sub  = piva * it.cantidad|int %}
+        <tr>
+          <td style="font-size:.82rem;color:var(--gray)">{{ it.codigo }}</td>
+          <td style="font-weight:500">{{ it.nombre }}</td>
+          <td style="text-align:center">{{ it.cantidad }}</td>
+          <td style="text-align:right">{% if pref > 0 %}₡{{ "{:,.0f}".format(piva) }}{% else %}—{% endif %}</td>
+          <td style="text-align:right;font-weight:700">{% if pref > 0 %}₡{{ "{:,.0f}".format(sub) }}{% else %}—{% endif %}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      <div style="text-align:right;margin-top:1rem;padding:1rem;background:#f8fafc;border-radius:8px">
+        <div style="font-size:.85rem;color:var(--gray)">Sin IVA: ₡{{ "{:,.0f}".format(ped.total_sin_iva or 0) }}</div>
+        <div style="font-size:.85rem;color:var(--gray)">IVA ({{ ped.iva_pct }}%): ₡{{ "{:,.0f}".format((ped.total_con_iva or 0) - (ped.total_sin_iva or 0)) }}</div>
+        <div style="font-size:1.2rem;font-weight:800;color:var(--primary);margin-top:.4rem">TOTAL: ₡{{ "{:,.0f}".format(ped.total_con_iva or 0) }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Columna lateral -->
+  <div>
+    <!-- Estado -->
+    <div class="card">
+      <div class="card-title">📋 Estado del pedido</div>
+      <div style="text-align:center;margin-bottom:1.2rem">
+        <span class="badge {{ estado_badge }}" style="font-size:.9rem;padding:6px 18px">{{ estado_lbl }}</span>
+      </div>
+      <div class="fi">
+        <label>Cambiar estado</label>
+        <select id="selectEstado">
+          {% for val, lbl in [('pendiente','Pendiente'),('en_proceso','En proceso'),('link_enviado','Link enviado'),('pagado','Pagado'),('cancelado','Cancelado')] %}
+          <option value="{{ val }}" {% if ped.estado == val %}selected{% endif %}>{{ lbl }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button class="btn btn-primary" style="width:100%" onclick="cambiarEstado()">Actualizar estado</button>
+      <div id="estadoMsg" style="display:none;margin-top:.6rem" class="alert alert-success">Estado actualizado.</div>
+    </div>
+
+    <!-- Enviar link de pago -->
+    <div class="card">
+      <div class="card-title">💳 Enviar link de pago</div>
+      {% if not ped.email %}
+      <div class="alert alert-error">Este cliente no tiene correo registrado. No se puede enviar link.</div>
+      {% else %}
+      <p style="font-size:.82rem;color:var(--gray);margin-bottom:1rem">Se enviará un email a <strong>{{ ped.email }}</strong> con el botón de pago.</p>
+      {% if ped.link_pago %}
+      <div class="alert alert-success" style="margin-bottom:1rem;font-size:.82rem">
+        ✅ Link enviado anteriormente:<br><a href="{{ ped.link_pago }}" target="_blank" style="word-break:break-all">{{ ped.link_pago }}</a>
+      </div>
+      {% endif %}
+      <div class="fi"><label>Link de pago *</label><input type="url" id="linkPago" value="{{ ped.link_pago or '' }}" placeholder="https://..."></div>
+      <div class="fi"><label>Nota para el cliente</label><textarea id="notaVendedor" rows="3" placeholder="Disponibilidad, instrucciones, etc.">{{ ped.nota_vendedor or '' }}</textarea></div>
+      <button class="btn btn-accent" style="width:100%" onclick="enviarLink()">💳 Enviar link de pago</button>
+      <div id="linkMsg" style="display:none;margin-top:.6rem" class="alert alert-success">Link enviado al cliente.</div>
+      {% endif %}
+    </div>
+
+    <!-- Info pedido -->
+    <div class="card" style="font-size:.82rem;color:var(--gray)">
+      <div style="margin-bottom:.4rem"><strong>Pedido:</strong> {{ ped.num_pedido }}</div>
+      <div style="margin-bottom:.4rem"><strong>Recibido:</strong> {{ ped.creado_en.strftime('%d/%m/%Y %H:%M') if ped.creado_en else '—' }}</div>
+      <div><strong>Actualizado:</strong> {{ ped.actualizado_en.strftime('%d/%m/%Y %H:%M') if ped.actualizado_en else '—' }}</div>
+    </div>
+  </div>
+</div>
+
+<script>
+async function cambiarEstado() {
+  const estado = document.getElementById('selectEstado').value;
+  const r = await fetch('/admin/pedidos/{{ ped.id }}/estado', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({estado})
+  });
+  if (r.ok) {
+    const m = document.getElementById('estadoMsg');
+    m.style.display = 'block';
+    setTimeout(() => { m.style.display='none'; location.reload(); }, 1200);
+  }
+}
+
+async function enviarLink() {
+  const link = document.getElementById('linkPago').value.trim();
+  if (!link) { alert('Ingrese el link de pago.'); return; }
+  const nota = document.getElementById('notaVendedor').value;
+  const btn  = document.querySelector('button[onclick="enviarLink()"]');
+  btn.textContent = '⏳ Enviando...'; btn.disabled = true;
+  const r = await fetch('/admin/pedidos/{{ ped.id }}/link-pago', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({link_pago: link, nota_vendedor: nota})
+  });
+  if (r.ok) {
+    const m = document.getElementById('linkMsg');
+    m.style.display = 'block';
+    setTimeout(() => { m.style.display='none'; location.reload(); }, 1500);
+  } else {
+    alert('Error al enviar. Intente de nuevo.');
+  }
+  btn.textContent = '💳 Enviar link de pago'; btn.disabled = false;
+}
+</script>
+{% endblock %}

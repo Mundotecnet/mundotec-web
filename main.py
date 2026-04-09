@@ -23,8 +23,12 @@ from public.catalogo_pub import (get_catalogo_publico, get_producto_publico,
                                   get_categorias_publico, registrar_contacto,
                                   get_proyectos_publico, registrar_cotizacion,
                                   get_cotizaciones, get_stats_cotizaciones,
-                                  marcar_cotizacion_leida, get_cotizacion_by_id)
-from notificaciones import enviar_notificacion_contacto, enviar_notificacion_cotizacion
+                                  marcar_cotizacion_leida, get_cotizacion_by_id,
+                                  registrar_pedido, get_pedidos, get_pedido_by_id,
+                                  actualizar_estado_pedido, set_link_pago,
+                                  get_stats_pedidos)
+from notificaciones import (enviar_notificacion_contacto, enviar_notificacion_cotizacion,
+                             enviar_notificacion_pedido, enviar_link_pago)
 from pdf_cotizacion import generar_pdf_cotizacion
 
 # ── Init ──────────────────────────────────────────────────────────────────────
@@ -186,6 +190,42 @@ async def carrito_cotizar(request: Request):
                                     pdf_bytes=pdf, num_cot=num_cot)
     return {"ok": True, "id": cot_id, "num_cot": num_cot}
 
+
+@app.post("/carrito/pedido")
+async def carrito_pedido(request: Request):
+    data          = await request.json()
+    tipo_factura  = data.get("tipo_factura", "ticket")
+    nombre        = data.get("nombre", "")
+    email         = data.get("email", "")
+    telefono      = data.get("telefono", "")
+    cedula        = data.get("cedula", "")
+    direccion     = data.get("direccion", "")
+    cod_actividad = data.get("cod_actividad", "")
+    nota_cliente  = data.get("nota_cliente", "")
+    items         = data.get("items", [])
+    total_sin_iva = float(data.get("total_sin_iva", 0))
+    total_con_iva = float(data.get("total_con_iva", 0))
+    iva_pct       = int(data.get("iva_pct", 13))
+
+    if not nombre or not items:
+        raise HTTPException(400, "Datos incompletos")
+
+    ped = registrar_pedido(tipo_factura, nombre, email, telefono, cedula,
+                           direccion, cod_actividad, nota_cliente,
+                           items, total_sin_iva, total_con_iva, iva_pct)
+
+    num_pedido = ped.get("num_pedido", "") if ped else ""
+    pedido_id  = ped.get("id", 0) if ped else 0
+
+    try:
+        ped_full = get_pedido_by_id(pedido_id) if pedido_id else {}
+        enviar_notificacion_pedido(ped_full)
+    except Exception:
+        pass
+
+    return {"ok": True, "id": pedido_id, "num_pedido": num_pedido}
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # ADMIN — Login
 # ─────────────────────────────────────────────────────────────────────────────
@@ -219,9 +259,12 @@ async def admin_home(request: Request):
     stats_cat = dbq("SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE activo) AS activos FROM catalogo_productos")[0]
     stats_pry = dbq("SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE activo) AS activos FROM proyectos")[0]
     stats_cnt = get_stats_contacto()
+    stats_cot = get_stats_cotizaciones()
+    stats_ped = get_stats_pedidos()
     return templates.TemplateResponse("admin/dashboard.html", {
         "request": request,
-        "stats_cat": stats_cat, "stats_pry": stats_pry, "stats_cnt": stats_cnt
+        "stats_cat": stats_cat, "stats_pry": stats_pry, "stats_cnt": stats_cnt,
+        "stats_cot": stats_cot, "stats_ped": stats_ped
     })
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -419,6 +462,54 @@ async def admin_descargar_pdf(request: Request, cid: int):
         media_type="application/pdf",
         headers={"Content-Disposition": f"inline; filename=Cotizacion-{num_cot}.pdf"}
     )
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ADMIN — Pedidos (Proceso)
+# ─────────────────────────────────────────────────────────────────────────────
+@app.get("/admin/pedidos", response_class=HTMLResponse)
+async def admin_pedidos(request: Request, estado: str = Query("")):
+    _require_admin(request)
+    filtro  = estado if estado else None
+    pedidos = get_pedidos(filtro)
+    stats   = get_stats_pedidos()
+    return templates.TemplateResponse("admin/pedidos.html", {
+        "request": request, "pedidos": pedidos,
+        "stats": stats, "filtro": estado
+    })
+
+@app.get("/admin/pedidos/{pid}", response_class=HTMLResponse)
+async def admin_pedido_detalle(request: Request, pid: int):
+    _require_admin(request)
+    ped = get_pedido_by_id(pid)
+    if not ped:
+        raise HTTPException(404, "Pedido no encontrado")
+    return templates.TemplateResponse("admin/pedido_detalle.html", {
+        "request": request, "ped": ped
+    })
+
+@app.post("/admin/pedidos/{pid}/estado")
+async def admin_pedido_estado(request: Request, pid: int):
+    _require_admin(request)
+    data   = await request.json()
+    estado = data.get("estado", "")
+    actualizar_estado_pedido(pid, estado)
+    return {"ok": True}
+
+@app.post("/admin/pedidos/{pid}/link-pago")
+async def admin_pedido_link_pago(request: Request, pid: int):
+    _require_admin(request)
+    data          = await request.json()
+    link          = data.get("link_pago", "").strip()
+    nota_vendedor = data.get("nota_vendedor", "")
+    if not link:
+        raise HTTPException(400, "Link de pago requerido")
+    set_link_pago(pid, link, nota_vendedor)
+    ped = get_pedido_by_id(pid)
+    try:
+        enviar_link_pago(ped, link, nota_vendedor)
+    except Exception:
+        pass
+    return {"ok": True}
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ADMIN — Configuración del sitio
