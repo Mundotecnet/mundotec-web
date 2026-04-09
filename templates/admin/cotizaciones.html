@@ -50,7 +50,7 @@
           {% if c.email    %}<div><a href="mailto:{{ c.email }}">✉ {{ c.email }}</a></div>{% endif %}
         </td>
         <td style="text-align:center">
-          <span class="badge badge-blue">{{ c.items|length }} item{{ 's' if c.items|length != 1 }}</span>
+          <span class="badge badge-blue">{{ c['items']|length }} item{{ 's' if c['items']|length != 1 }}</span>
         </td>
         <td style="text-align:right;font-weight:700;color:var(--primary)">
           ₡{{ "{:,.0f}".format(c.total_con_iva|float) if c.total_con_iva else '—' }}
