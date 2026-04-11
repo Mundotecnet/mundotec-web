@@ -21,109 +21,50 @@
 .hero p { font-size:1.1rem; color:rgba(255,255,255,.8); margin-bottom:2rem; line-height:1.7; max-width:550px; }
 .hero-btns { display:flex; gap:1rem; flex-wrap:wrap; }
 
-/* ── HERO SLIDER (con productos) ── */
-.hs-wrap {
-  position: relative;
-  width: 100%;
-  height: 88vh;
-  min-height: 500px;
-  overflow: hidden;
-  background: #f5f5f5;
+/* ── CARRUSEL DE PRODUCTOS ── */
+.cr-section { background:#f8f9fb; padding:2.5rem 0; }
+.cr-header {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:0 5% 1.2rem;
 }
-.hs-slide {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  opacity: 0;
-  transition: opacity .7s ease;
-  pointer-events: none;
+.cr-header h2 { font-size:1.2rem; font-weight:800; color:#0d1b2a; margin:0; }
+.cr-nav { display:flex; gap:.5rem; }
+.cr-btn {
+  width:34px; height:34px; border-radius:50%;
+  border:2px solid #d1d5db; background:#fff;
+  cursor:pointer; display:flex; align-items:center;
+  justify-content:center; font-size:.85rem; color:#374151;
+  transition:border-color .15s, color .15s;
 }
-.hs-slide.active { opacity:1; pointer-events:auto; }
+.cr-btn:hover { border-color:var(--accent); color:var(--accent); }
+.cr-viewport { overflow:hidden; padding:0 5%; }
+.cr-track {
+  display:flex; gap:1.2rem;
+  transition:transform .4s cubic-bezier(.4,0,.2,1);
+}
+.cr-card {
+  flex:0 0 calc(25% - .9rem);
+  background:#fff; border-radius:12px;
+  box-shadow:0 1px 6px rgba(0,0,0,.07);
+  overflow:hidden; text-decoration:none; color:inherit;
+  transition:box-shadow .2s, transform .2s;
+  display:block;
+}
+.cr-card:hover { box-shadow:0 4px 18px rgba(0,0,0,.13); transform:translateY(-3px); }
+.cr-img {
+  height:180px; overflow:hidden;
+  background:#e8f0fb;
+  display:flex; align-items:center; justify-content:center;
+  font-size:2.5rem;
+}
+.cr-img img { width:100%; height:100%; object-fit:cover; display:block; }
+.cr-body { padding:.9rem 1rem 1rem; }
+.cr-cat { font-size:.68rem; font-weight:700; color:var(--accent); text-transform:uppercase; margin-bottom:.3rem; }
+.cr-name { font-size:.88rem; font-weight:700; color:#111; line-height:1.4; margin-bottom:.5rem; }
+.cr-link { font-size:.78rem; color:var(--primary); font-weight:600; }
 
-/* Panel izquierdo */
-.hs-left {
-  width: 44%;
-  background: #fff;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 4rem 4rem 4rem 6%;
-  position: relative;
-  z-index: 2;
-  clip-path: polygon(0 0, 92% 0, 100% 100%, 0 100%);
-}
-.hs-cat {
-  font-size: .75rem; font-weight: 700;
-  color: var(--accent); text-transform: uppercase;
-  letter-spacing: .12em; margin-bottom: .9rem;
-}
-.hs-title {
-  font-size: clamp(1.6rem, 3vw, 2.6rem);
-  font-weight: 900; line-height: 1.15;
-  color: #0d1b2a; margin-bottom: 1rem;
-}
-.hs-desc {
-  font-size: .95rem; color: #4b5563;
-  line-height: 1.7; margin-bottom: 2rem;
-  max-width: 340px;
-}
-.hs-btns { display:flex; gap:.8rem; flex-wrap:wrap; }
-
-/* Panel derecho — imagen */
-.hs-right {
-  flex: 1;
-  position: relative;
-  overflow: hidden;
-}
-.hs-right img {
-  width: 100%; height: 100%;
-  object-fit: cover;
-  display: block;
-}
-.hs-right .hs-placeholder {
-  width: 100%; height: 100%;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--dark) 100%);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 8rem;
-}
-
-/* Controles */
-.hs-controls {
-  position: absolute;
-  bottom: 1.8rem; left: 6%;
-  display: flex; align-items: center; gap: 1rem;
-  z-index: 10;
-}
-.hs-dots { display:flex; gap:.5rem; }
-.hs-dot {
-  width: 8px; height: 8px; border-radius: 4px;
-  background: #d1d5db; cursor: pointer;
-  transition: width .3s, background .3s;
-}
-.hs-dot.active { width: 28px; background: var(--accent); }
-.hs-arrows { display:flex; gap:.5rem; }
-.hs-arrow {
-  width: 36px; height: 36px; border-radius: 50%;
-  border: 2px solid #d1d5db;
-  background: #fff; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  font-size: .9rem; color: #374151;
-  transition: border-color .2s, color .2s;
-}
-.hs-arrow:hover { border-color: var(--accent); color: var(--accent); }
-.hs-counter {
-  font-size: .78rem; font-weight: 700; color: #9ca3af;
-  letter-spacing: .05em;
-}
-
-@media(max-width:768px){
-  .hs-wrap { height: auto; min-height: unset; }
-  .hs-slide { position:relative; flex-direction:column; opacity:1 !important; display:none; pointer-events:auto; }
-  .hs-slide.active { display:flex; }
-  .hs-left { width:100%; clip-path:none; padding:2.5rem 1.2rem 1.5rem; }
-  .hs-right { height: 55vw; }
-  .hs-controls { left:1.2rem; }
-}
+@media(max-width:900px){ .cr-card { flex:0 0 calc(33.33% - .8rem); } }
+@media(max-width:600px){ .cr-card { flex:0 0 calc(80% - .6rem); } }
 
 /* ── STATS ── */
 .stats-bar {
@@ -176,96 +117,6 @@
 {% block content %}
 
 <!-- ── HERO ── -->
-{% if hero %}
-<!-- Slider de productos -->
-<div class="hs-wrap" id="hsWrap">
-  {% for p in hero %}
-  <div class="hs-slide{% if loop.first %} active{% endif %}">
-
-    <!-- Izquierda: texto -->
-    <div class="hs-left">
-      {% if p.categoria %}<div class="hs-cat">{{ p.categoria }}</div>{% endif %}
-      <div class="hs-title">{{ p.nombre }}</div>
-      {% if p.descripcion_web %}
-        <div class="hs-desc">{{ p.descripcion_web[:140] }}{% if p.descripcion_web|length > 140 %}…{% endif %}</div>
-      {% endif %}
-      <div class="hs-btns">
-        <a href="/catalogo/{{ p.id }}" class="btn btn-accent">Ver producto</a>
-        <a href="/catalogo" class="btn btn-outline">Ver catálogo</a>
-      </div>
-    </div>
-
-    <!-- Derecha: imagen -->
-    <div class="hs-right">
-      {% if p.imagen_principal %}
-        <img src="{{ p.imagen_principal }}" alt="{{ p.nombre }}">
-      {% else %}
-        <div class="hs-placeholder">📦</div>
-      {% endif %}
-    </div>
-
-  </div>
-  {% endfor %}
-
-  <!-- Controles (solo si hay más de 1) -->
-  {% if hero|length > 1 %}
-  <div class="hs-controls">
-    <div class="hs-dots" id="hsDots">
-      {% for p in hero %}
-      <div class="hs-dot{% if loop.first %} active{% endif %}" onclick="hsGo({{ loop.index0 }})"></div>
-      {% endfor %}
-    </div>
-    <div class="hs-arrows">
-      <button class="hs-arrow" onclick="hsMove(-1)">&#8592;</button>
-      <button class="hs-arrow" onclick="hsMove(1)">&#8594;</button>
-    </div>
-    <span class="hs-counter" id="hsCtr">1 / {{ hero|length }}</span>
-  </div>
-  {% endif %}
-</div>
-
-<script>
-(function(){
-  const slides = document.querySelectorAll('.hs-slide');
-  const dots   = document.querySelectorAll('.hs-dot');
-  const ctr    = document.getElementById('hsCtr');
-  const total  = slides.length;
-  if(total <= 1) return;
-  let cur = 0, timer;
-
-  function go(n){
-    slides[cur].classList.remove('active');
-    dots[cur].classList.remove('active');
-    cur = (n + total) % total;
-    slides[cur].classList.add('active');
-    dots[cur].classList.add('active');
-    if(ctr) ctr.textContent = (cur+1) + ' / ' + total;
-    reset();
-  }
-  function reset(){
-    clearInterval(timer);
-    timer = setInterval(() => go(cur+1), 6000);
-  }
-  window.hsMove = d => go(cur+d);
-  window.hsGo   = n => go(n);
-
-  const wrap = document.getElementById('hsWrap');
-  wrap.addEventListener('mouseenter', () => clearInterval(timer));
-  wrap.addEventListener('mouseleave', reset);
-
-  let sx;
-  wrap.addEventListener('touchstart', e => sx = e.touches[0].clientX, {passive:true});
-  wrap.addEventListener('touchend',   e => {
-    const dx = e.changedTouches[0].clientX - sx;
-    if(Math.abs(dx) > 40) go(cur + (dx < 0 ? 1 : -1));
-  }, {passive:true});
-
-  reset();
-})();
-</script>
-
-{% else %}
-<!-- Fallback: hero estático si no hay productos en slider -->
 <section class="hero">
   <div class="hero-content">
     <div class="hero-badge">🔧 Soluciones tecnológicas profesionales</div>
@@ -277,6 +128,74 @@
     </div>
   </div>
 </section>
+
+<!-- ── CARRUSEL DE PRODUCTOS ── -->
+{% if hero %}
+<div class="cr-section">
+  <div class="cr-header">
+    <h2>🎯 Productos seleccionados</h2>
+    <div class="cr-nav">
+      <button class="cr-btn" onclick="crMove(-1)">&#8592;</button>
+      <button class="cr-btn" onclick="crMove(1)">&#8594;</button>
+    </div>
+  </div>
+  <div class="cr-viewport">
+    <div class="cr-track" id="crTrack">
+      {% for p in hero %}
+      <a href="/catalogo/{{ p.id }}" class="cr-card">
+        <div class="cr-img">
+          {% if p.imagen_principal %}
+            <img src="{{ p.imagen_principal }}" alt="{{ p.nombre }}" loading="lazy">
+          {% else %}
+            📦
+          {% endif %}
+        </div>
+        <div class="cr-body">
+          {% if p.categoria %}<div class="cr-cat">{{ p.categoria }}</div>{% endif %}
+          <div class="cr-name">{{ p.nombre }}</div>
+          <div class="cr-link">Ver detalles →</div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const track  = document.getElementById('crTrack');
+  if(!track) return;
+  const cards  = track.querySelectorAll('.cr-card');
+  const total  = cards.length;
+  if(total < 2) return;
+  let pos = 0;
+
+  function visible(){
+    if(window.innerWidth <= 600) return 1;
+    if(window.innerWidth <= 900) return 3;
+    return 4;
+  }
+
+  function move(d){
+    const max = Math.max(0, total - visible());
+    pos = Math.min(max, Math.max(0, pos + d));
+    const card  = cards[0];
+    const gap   = parseFloat(getComputedStyle(track).gap) || 19;
+    const step  = card.offsetWidth + gap;
+    track.style.transform = `translateX(-${pos * step}px)`;
+  }
+
+  window.crMove = move;
+
+  // swipe
+  let sx;
+  track.addEventListener('touchstart', e => sx = e.touches[0].clientX, {passive:true});
+  track.addEventListener('touchend',   e => {
+    const dx = e.changedTouches[0].clientX - sx;
+    if(Math.abs(dx) > 40) move(dx < 0 ? 1 : -1);
+  }, {passive:true});
+})();
+</script>
 {% endif %}
 
 <!-- ── STATS ── -->
