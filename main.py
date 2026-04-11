@@ -45,6 +45,23 @@ app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY,
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
+# Filtro para formatear fechas (soporta str ISO y datetime)
+def _fmtdt(value, fmt="%d/%m/%Y %H:%M"):
+    if not value:
+        return ""
+    if isinstance(value, str):
+        from datetime import datetime
+        try:
+            return datetime.fromisoformat(value).strftime(fmt)
+        except Exception:
+            return value[:16].replace("T", " ")
+    try:
+        return value.strftime(fmt)
+    except Exception:
+        return str(value)
+
+templates.env.filters["fmtdt"] = _fmtdt
+
 ADMIN_USER = "admin"
 ADMIN_PASS = "Mundotec2026!"   # cambiar en producción
 

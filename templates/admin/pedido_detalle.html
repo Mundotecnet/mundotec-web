@@ -120,8 +120,8 @@
     <!-- Info pedido -->
     <div class="card" style="font-size:.82rem;color:var(--gray)">
       <div style="margin-bottom:.4rem"><strong>Pedido:</strong> {{ ped.num_pedido }}</div>
-      <div style="margin-bottom:.4rem"><strong>Recibido:</strong> {{ ped.creado_en.strftime('%d/%m/%Y %H:%M') if ped.creado_en else '—' }}</div>
-      <div><strong>Actualizado:</strong> {{ ped.actualizado_en.strftime('%d/%m/%Y %H:%M') if ped.actualizado_en else '—' }}</div>
+      <div style="margin-bottom:.4rem"><strong>Recibido:</strong> {{ ped.creado_en | fmtdt }}</div>
+      <div><strong>Actualizado:</strong> {{ ped.actualizado_en | fmtdt }}</div>
     </div>
   </div>
 </div>

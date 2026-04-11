@@ -88,7 +88,7 @@
       </td>
       <td><span class="badge {{ estado_badge }}">{{ estado_lbl }}</span></td>
       <td style="font-size:.8rem;color:var(--gray)">
-        {{ p.creado_en.strftime('%d/%m/%Y %H:%M') if p.creado_en else '—' }}
+        {{ p.creado_en | fmtdt }}
       </td>
       <td>
         <a href="/admin/pedidos/{{ p.id }}" class="btn btn-sm btn-outline">Ver →</a>

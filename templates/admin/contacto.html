@@ -51,7 +51,7 @@
         <td style="max-width:240px;font-size:.85rem;color:#374151">
           <span title="{{ m.mensaje }}">{{ m.mensaje[:80] }}{% if m.mensaje|length > 80 %}…{% endif %}</span>
         </td>
-        <td style="font-size:.78rem;color:#9ca3af;white-space:nowrap">{{ m.creado_en.strftime('%d/%m/%Y %H:%M') if m.creado_en else '' }}</td>
+        <td style="font-size:.78rem;color:#9ca3af;white-space:nowrap">{{ m.creado_en | fmtdt }}</td>
         <td>
           {% if not m.leido %}
           <button onclick="marcarLeido({{ m.id }})" class="btn btn-ghost btn-sm">✅ Leído</button>

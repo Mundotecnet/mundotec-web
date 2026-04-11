@@ -56,7 +56,7 @@
           ₡{{ "{:,.0f}".format(c.total_con_iva|float) if c.total_con_iva else '—' }}
         </td>
         <td style="font-size:.78rem;color:#9ca3af;white-space:nowrap">
-          {{ c.creado_en.strftime('%d/%m/%Y %H:%M') if c.creado_en else '' }}
+          {{ c.creado_en | fmtdt }}
         </td>
         <td onclick="event.stopPropagation()" style="white-space:nowrap">
           <a href="/admin/cotizaciones/{{ c.id }}/pdf" target="_blank"
