@@ -56,12 +56,12 @@
 }
 .cr-card:hover { box-shadow:0 4px 18px rgba(0,0,0,.13); transform:translateY(-3px); }
 .cr-img {
-  height:180px; overflow:hidden;
-  background:#e8f0fb;
+  aspect-ratio:3/2; overflow:hidden;
+  background:#fff; border-bottom:1px solid #f0f0f0;
   display:flex; align-items:center; justify-content:center;
   font-size:2.5rem;
 }
-.cr-img img { width:100%; height:100%; object-fit:cover; display:block; }
+.cr-img img { width:100%; height:100%; object-fit:contain; display:block; }
 .cr-body { padding:.9rem 1rem 1rem; }
 .cr-cat { font-size:.68rem; font-weight:700; color:var(--accent); text-transform:uppercase; margin-bottom:.3rem; }
 .cr-name { font-size:.88rem; font-weight:700; color:#111; line-height:1.4; margin-bottom:.5rem; }
