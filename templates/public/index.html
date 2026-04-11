@@ -45,17 +45,117 @@
 /* ── DESTACADOS ── */
 .dest-header { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:2rem; }
 
-/* ── PROYECTOS ── */
-.pry-card { border-radius:var(--radius); overflow:hidden; position:relative; height:240px; }
-.pry-img  { width:100%; height:100%; object-fit:cover; }
-.pry-overlay {
-  position:absolute; bottom:0; left:0; right:0;
-  background:linear-gradient(transparent, rgba(0,0,0,.85));
-  padding:1.5rem 1.2rem .9rem; color:#fff;
+/* ── SLIDER DE PROYECTOS ── */
+.pry-slider-wrap {
+  position: relative;
+  width: 100%;
+  height: 70vh;
+  min-height: 420px;
+  overflow: hidden;
+  background: #0d1b2a;
 }
-.pry-cat   { font-size:.7rem; font-weight:600; color:var(--accent); text-transform:uppercase; }
-.pry-title { font-size:.95rem; font-weight:700; margin-top:.3rem; }
-.pry-placeholder { background:linear-gradient(135deg,#1a2a4a,#2d4a7a); display:flex; align-items:center; justify-content:center; font-size:3rem; }
+.pry-slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity .8s ease;
+  pointer-events: none;
+}
+.pry-slide.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+.pry-slide img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.pry-slide .slide-placeholder {
+  width: 100%; height: 100%;
+  background: linear-gradient(135deg, #1a2a4a 0%, #2d4a7a 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 6rem;
+}
+.pry-slide-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,.80) 0%, rgba(0,0,0,.15) 55%, transparent 100%);
+}
+.pry-slide-content {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  padding: 2.5rem 4rem;
+  color: #fff;
+}
+.pry-slide-content .slide-cat {
+  font-size: .75rem; font-weight: 700;
+  color: var(--accent); text-transform: uppercase;
+  letter-spacing: .1em; margin-bottom: .5rem;
+}
+.pry-slide-content .slide-title {
+  font-size: clamp(1.4rem, 3vw, 2.2rem);
+  font-weight: 800; line-height: 1.2;
+  margin-bottom: .6rem;
+  text-shadow: 0 2px 8px rgba(0,0,0,.4);
+}
+.pry-slide-content .slide-desc {
+  font-size: .95rem;
+  color: rgba(255,255,255,.8);
+  max-width: 600px;
+  line-height: 1.6;
+}
+/* flechas */
+.pry-arrow {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 48px; height: 48px; border-radius: 50%;
+  background: rgba(255,255,255,.18); backdrop-filter: blur(6px);
+  border: 1px solid rgba(255,255,255,.3);
+  color: #fff; font-size: 1.2rem;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; z-index: 10;
+  transition: background .2s;
+  user-select: none;
+}
+.pry-arrow:hover { background: rgba(255,255,255,.35); }
+.pry-arrow.prev { left: 1.2rem; }
+.pry-arrow.next { right: 1.2rem; }
+/* puntos */
+.pry-dots {
+  position: absolute; bottom: 1.2rem; right: 4rem;
+  display: flex; gap: .5rem; z-index: 10;
+}
+.pry-dot {
+  width: 8px; height: 8px; border-radius: 4px;
+  background: rgba(255,255,255,.4);
+  transition: width .3s, background .3s;
+  cursor: pointer;
+}
+.pry-dot.active {
+  width: 24px;
+  background: var(--accent);
+}
+/* contador */
+.pry-counter {
+  position: absolute; top: 1.2rem; right: 1.5rem;
+  color: rgba(255,255,255,.6); font-size: .8rem;
+  font-weight: 600; z-index: 10;
+  letter-spacing: .05em;
+}
+/* sección encabezado */
+.pry-header {
+  display: flex; justify-content: space-between; align-items: flex-end;
+  padding: 3rem 4rem 1.5rem;
+  background: #fff;
+}
+.pry-header-right { text-align: right; }
+
+@media(max-width:700px){
+  .pry-slider-wrap { height: 55vw; min-height: 280px; }
+  .pry-slide-content { padding: 1.2rem 1.2rem; }
+  .pry-header { flex-direction: column; gap: 1rem; padding: 2rem 1.2rem 1rem; }
+  .pry-header-right { text-align: left; }
+  .pry-dots { right: 1.2rem; }
+}
 
 /* ── CTA final ── */
 .cta-section {
@@ -147,33 +247,103 @@
 </section>
 {% endif %}
 
-<!-- ── PROYECTOS ── -->
+<!-- ── PROYECTOS SLIDER ── -->
 {% if proyectos %}
-<section class="section">
-  <div class="container">
-    <span class="badge badge-primary">Nuestro trabajo</span>
-    <h2 class="section-title" style="margin-top:.5rem">Proyectos realizados</h2>
-    <p class="section-sub">Algunas de las soluciones que hemos implementado para nuestros clientes.</p>
-    <div class="grid-4">
-      {% for p in proyectos %}
-      <div class="pry-card">
-        {% if p.imagen_path %}
-          <img class="pry-img" src="{{ p.imagen_path }}" alt="{{ p.titulo }}">
-        {% else %}
-          <div class="pry-img pry-placeholder">🏗️</div>
-        {% endif %}
-        <div class="pry-overlay">
-          {% if p.categoria %}<div class="pry-cat">{{ p.categoria }}</div>{% endif %}
-          <div class="pry-title">{{ p.titulo }}</div>
-        </div>
-      </div>
-      {% endfor %}
+<section>
+  <!-- encabezado fuera del slider -->
+  <div class="pry-header">
+    <div>
+      <span class="badge badge-primary">Nuestro trabajo</span>
+      <h2 class="section-title" style="margin-top:.5rem;margin-bottom:0">Proyectos realizados</h2>
     </div>
-    <div style="text-align:center;margin-top:2rem">
-      <a href="/proyectos" class="btn btn-outline">Ver todos los proyectos</a>
+    <div class="pry-header-right">
+      <p style="color:var(--gray);font-size:.9rem;margin-bottom:.8rem">
+        Soluciones implementadas para nuestros clientes.
+      </p>
+      <a href="/proyectos" class="btn btn-outline">Ver todos los proyectos →</a>
     </div>
   </div>
+
+  <!-- slider -->
+  <div class="pry-slider-wrap" id="prySlider">
+
+    {% for p in proyectos %}
+    <div class="pry-slide{% if loop.first %} active{% endif %}" data-index="{{ loop.index0 }}">
+      {% if p.imagen_path %}
+        <img src="{{ p.imagen_path }}" alt="{{ p.titulo }}" loading="lazy">
+      {% else %}
+        <div class="slide-placeholder">🏗️</div>
+      {% endif %}
+      <div class="pry-slide-overlay"></div>
+      <div class="pry-slide-content">
+        {% if p.categoria %}<div class="slide-cat">{{ p.categoria }}</div>{% endif %}
+        <div class="slide-title">{{ p.titulo }}</div>
+        {% if p.descripcion %}
+          <div class="slide-desc">{{ p.descripcion[:120] }}{% if p.descripcion|length > 120 %}…{% endif %}</div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+
+    <!-- flechas -->
+    <button class="pry-arrow prev" onclick="pryMove(-1)" aria-label="Anterior">&#8592;</button>
+    <button class="pry-arrow next" onclick="pryMove(1)"  aria-label="Siguiente">&#8594;</button>
+
+    <!-- puntos -->
+    <div class="pry-dots" id="pryDots">
+      {% for p in proyectos %}
+      <div class="pry-dot{% if loop.first %} active{% endif %}" onclick="pryGo({{ loop.index0 }})"></div>
+      {% endfor %}
+    </div>
+
+    <!-- contador -->
+    <div class="pry-counter" id="pryCtr">1 / {{ proyectos|length }}</div>
+
+  </div>
 </section>
+
+<script>
+(function(){
+  const slides  = document.querySelectorAll('.pry-slide');
+  const dots    = document.querySelectorAll('.pry-dot');
+  const ctr     = document.getElementById('pryCtr');
+  const total   = slides.length;
+  let cur = 0, timer;
+
+  function go(n){
+    slides[cur].classList.remove('active');
+    dots[cur].classList.remove('active');
+    cur = (n + total) % total;
+    slides[cur].classList.add('active');
+    dots[cur].classList.add('active');
+    ctr.textContent = (cur+1) + ' / ' + total;
+    resetTimer();
+  }
+
+  function resetTimer(){
+    clearInterval(timer);
+    timer = setInterval(()=> go(cur+1), 5000);
+  }
+
+  window.pryMove = d => go(cur + d);
+  window.pryGo   = n => go(n);
+
+  // pausar al hacer hover
+  const wrap = document.getElementById('prySlider');
+  wrap.addEventListener('mouseenter', ()=> clearInterval(timer));
+  wrap.addEventListener('mouseleave', resetTimer);
+
+  // swipe en móvil
+  let sx;
+  wrap.addEventListener('touchstart', e => sx = e.touches[0].clientX, {passive:true});
+  wrap.addEventListener('touchend',   e => {
+    const dx = e.changedTouches[0].clientX - sx;
+    if(Math.abs(dx) > 40) go(cur + (dx < 0 ? 1 : -1));
+  }, {passive:true});
+
+  resetTimer();
+})();
+</script>
 {% endif %}
 
 <!-- ── CTA ── -->
