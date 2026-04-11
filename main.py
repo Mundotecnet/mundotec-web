@@ -68,7 +68,7 @@ def _save_upload(file: UploadFile, dest_dir: str, prefix: str) -> str:
 async def home(request: Request):
     cfg      = get_config()
     destacados = get_catalogo_publico(destacado=True)[:6]
-    proyectos  = get_proyectos_publico()[:8]
+    proyectos  = get_proyectos_publico(solo_slider=True)[:8]
     return templates.TemplateResponse("public/index.html", {
         "request": request, "cfg": cfg,
         "destacados": destacados, "proyectos": proyectos,

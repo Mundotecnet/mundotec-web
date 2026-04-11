@@ -35,6 +35,7 @@
     </div>
     <div class="pc-footer">
       <span class="badge {{ 'badge-green' if p.activo else 'badge-red' }}">{{ 'Activo' if p.activo else 'Inactivo' }}</span>
+      {% if p.en_slider %}<span class="badge" style="background:#6366f1;color:#fff">🎞 Slider</span>{% endif %}
       <div style="margin-left:auto;display:flex;gap:.4rem">
         <label class="btn btn-ghost btn-sm" style="cursor:pointer">
           📷
@@ -89,6 +90,9 @@
       <label style="display:flex;align-items:center;gap:.5rem;font-size:.88rem;cursor:pointer">
         <label class="toggle"><input type="checkbox" id="e-destacado"><span class="slider"></span></label> Destacado
       </label>
+      <label style="display:flex;align-items:center;gap:.5rem;font-size:.88rem;cursor:pointer">
+        <label class="toggle"><input type="checkbox" id="e-en-slider"><span class="slider"></span></label> <span style="color:#6366f1;font-weight:600">🎞 Slider inicio</span>
+      </label>
       <div class="fi" style="margin:0;flex:1"><label style="margin-bottom:.2rem">Orden</label><input type="number" id="e-orden" min="0" style="width:80px"></div>
     </div>
     <div style="display:flex;gap:.8rem;justify-content:flex-end;margin-top:1rem">
@@ -112,15 +116,16 @@ function editarProy(id, p) {
   document.getElementById('e-desc').value      = p.descripcion || '';
   document.getElementById('e-categoria').value = p.categoria || '';
   document.getElementById('e-fecha').value     = p.fecha || '';
-  document.getElementById('e-activo').checked  = p.activo;
-  document.getElementById('e-destacado').checked = p.destacado;
-  document.getElementById('e-orden').value     = p.orden || 0;
+  document.getElementById('e-activo').checked    = p.activo;
+  document.getElementById('e-destacado').checked  = p.destacado;
+  document.getElementById('e-en-slider').checked  = p.en_slider || false;
+  document.getElementById('e-orden').value        = p.orden || 0;
   document.getElementById('modalEditar').classList.add('open');
 }
 
 async function guardarProy() {
   const id   = document.getElementById('e-id').value;
-  const data = { titulo: document.getElementById('e-titulo').value, descripcion: document.getElementById('e-desc').value, categoria: document.getElementById('e-categoria').value, fecha: document.getElementById('e-fecha').value || null, activo: document.getElementById('e-activo').checked, destacado: document.getElementById('e-destacado').checked, orden: parseInt(document.getElementById('e-orden').value) || 0 };
+  const data = { titulo: document.getElementById('e-titulo').value, descripcion: document.getElementById('e-desc').value, categoria: document.getElementById('e-categoria').value, fecha: document.getElementById('e-fecha').value || null, activo: document.getElementById('e-activo').checked, destacado: document.getElementById('e-destacado').checked, en_slider: document.getElementById('e-en-slider').checked, orden: parseInt(document.getElementById('e-orden').value) || 0 };
   await fetch(`/admin/proyectos/${id}/guardar`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
   location.reload();
 }
