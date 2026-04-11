@@ -4,7 +4,7 @@
 **Servidor:** Ubuntu 192.168.88.250:8001
 **Ruta local:** `/Users/lroot/Downloads/mundotec-web`
 **Ruta servidor:** `/home/lroot/mundotec-web`
-**Última actualización:** 2026-04-08
+**Última actualización:** 2026-04-11
 
 ---
 
@@ -185,10 +185,39 @@ server {
 | Fecha | Tipo | Descripción |
 |-------|------|-------------|
 | 2026-04-08 | Git inicial | v1.0.0 — Primera versión funcional |
+| 2026-04-11 | Git | Sesiones 4 y 5 — PDF, pedidos, correcciones cotizaciones |
 
 ---
 
 ## BITÁCORA DE CAMBIOS
+
+### [SESIÓN 5] — 2026-04-11 — Correcciones cotizaciones
+
+| # | Tipo | Descripción |
+|---|------|-------------|
+| 1 | Fix | `c['items']` en `cotizaciones.html` para evitar conflicto con `dict.items()` |
+| 2 | Fix | Corrección en loop de `cotizaciones.html` para iterar items correctamente |
+
+---
+
+### [SESIÓN 4] — 2026-04-08 — PDF cotizaciones + módulo Tramitar Compra (pedidos)
+
+| # | Tipo | Descripción |
+|---|------|-------------|
+| 1 | Nuevo | Generación de PDF de cotización y envío por correo desde el carrito |
+| 2 | Nuevo | Datos fiscales, cuentas bancarias y logo en PDF cotización |
+| 3 | Nuevo | Logo Mundotec HD agregado al proyecto para usar en PDF |
+| 4 | Fix | Fuente DejaVuSans para mostrar símbolo ₡ correctamente en PDF |
+| 5 | Fix | Columna total PDF ampliada + label IVA corregido (13%) |
+| 6 | Nuevo | Tabla `pedidos` en BD con estados: `pendiente → en_proceso → link_enviado → pagado` |
+| 7 | Nuevo | CRUD pedidos en `catalogo_pub.py` (registrar, listar, detalle, cambio de estado, link pago) |
+| 8 | Nuevo | Notificaciones email para nuevo pedido y envío de link de pago al cliente |
+| 9 | Nuevo | Carrito: botón y modal "Tramitar Compra" con formulario dinámico Ticket/Factura |
+| 10 | Nuevo | Admin: sección "Proceso" (`/admin/pedidos`) con lista y detalle por pedido |
+| 11 | Nuevo | Admin: envío de link de pago directo desde el panel al correo del cliente |
+| 12 | Mejora | Sidebar renombrado: Cotizaciones → Oportunidades, nueva entrada Proceso |
+
+---
 
 ### [SESIÓN 3] — 2026-04-07 — Carrito de cotización + precios con IVA
 
