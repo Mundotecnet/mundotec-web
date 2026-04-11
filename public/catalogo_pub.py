@@ -51,11 +51,9 @@ def registrar_contacto(nombre, email, telefono, empresa, mensaje,
          returning=True)
 
 
-def get_proyectos_publico(categoria="", solo_slider=False) -> list:
+def get_proyectos_publico(categoria="") -> list:
     filtros = ["activo=TRUE"]
     params  = []
-    if solo_slider:
-        filtros.append("en_slider=TRUE")
     if categoria:
         filtros.append("categoria ILIKE %s"); params.append(f"%{categoria}%")
     where = "WHERE " + " AND ".join(filtros)

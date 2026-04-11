@@ -18,10 +18,9 @@ def crear_proyecto(titulo, descripcion="", categoria="", fecha=None) -> dict:
 def actualizar_proyecto(proj_id: int, data: dict):
     execute("""
         UPDATE proyectos SET titulo=%s, descripcion=%s, categoria=%s,
-        activo=%s, destacado=%s, en_slider=%s, orden=%s, fecha=%s WHERE id=%s
+        activo=%s, destacado=%s, orden=%s, fecha=%s WHERE id=%s
     """, (data.get("titulo"), data.get("descripcion",""), data.get("categoria",""),
           data.get("activo", True), data.get("destacado", False),
-          data.get("en_slider", False),
           data.get("orden", 0), data.get("fecha"), proj_id))
 
 def actualizar_imagen_proyecto(proj_id: int, img_path: str):

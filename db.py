@@ -30,7 +30,6 @@ CREATE TABLE IF NOT EXISTS proyectos (
     categoria    VARCHAR(100),
     activo       BOOLEAN       DEFAULT TRUE,
     destacado    BOOLEAN       DEFAULT FALSE,
-    en_slider    BOOLEAN       DEFAULT FALSE,
     orden        INT           DEFAULT 0,
     fecha        DATE
 );
