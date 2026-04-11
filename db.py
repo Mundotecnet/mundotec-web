@@ -1,6 +1,20 @@
 import psycopg2
 import psycopg2.extras
+import datetime
 from config import PG_HOST, PG_PORT, PG_DB, PG_USER, PG_PASSWORD
+
+
+def _normalize(row: dict) -> dict:
+    """Convierte tipos no-JSON-serializables (date, datetime, Decimal) a tipos básicos."""
+    out = {}
+    for k, v in row.items():
+        if isinstance(v, datetime.datetime):
+            out[k] = v.isoformat()
+        elif isinstance(v, datetime.date):
+            out[k] = v.isoformat()          # "2026-04-11"
+        else:
+            out[k] = v
+    return out
 
 DDL = """
 CREATE TABLE IF NOT EXISTS site_config (
@@ -145,7 +159,7 @@ def query(sql: str, params=(), many=True):
         with conn.cursor() as cur:
             cur.execute(sql, params)
             rows = cur.fetchall() if many else cur.fetchone()
-            return [dict(r) for r in rows] if many else (dict(rows) if rows else None)
+            return [_normalize(dict(r)) for r in rows] if many else (_normalize(dict(rows)) if rows else None)
     finally:
         conn.close()
 
@@ -156,7 +170,7 @@ def execute(sql: str, params=(), returning=False):
     try:
         with conn.cursor() as cur:
             cur.execute(sql, params)
-            result = dict(cur.fetchone()) if returning and cur.description else None
+            result = _normalize(dict(cur.fetchone())) if returning and cur.description else None
             conn.commit()
             return result
     except Exception:
