@@ -7,8 +7,9 @@
 .breadcrumb a { color:var(--primary); }
 .prod-layout { display:grid; grid-template-columns:1fr 1fr; gap:3rem; padding:0 5% 4rem; }
 .galeria { position:sticky; top:80px; }
-.img-principal { width:100%; aspect-ratio:4/3; object-fit:cover; border-radius:12px; background:#f3f4f6; }
-.img-placeholder { width:100%; aspect-ratio:4/3; border-radius:12px; background:linear-gradient(135deg,#e8f0fb,#c7d9f5); display:flex; align-items:center; justify-content:center; font-size:5rem; }
+.img-wrap { width:100%; aspect-ratio:4/3; border-radius:12px; overflow:hidden; border:1px solid #e5e7eb; background:#f3f4f6; box-shadow:0 2px 12px rgba(0,0,0,.07); }
+.img-principal { width:100%; height:100%; object-fit:cover; object-position:center; display:block; }
+.img-placeholder { width:100%; aspect-ratio:4/3; border-radius:12px; border:1px solid #e5e7eb; background:linear-gradient(135deg,#e8f0fb,#c7d9f5); display:flex; align-items:center; justify-content:center; font-size:5rem; }
 .thumbs { display:flex; gap:.7rem; margin-top:.8rem; flex-wrap:wrap; }
 .thumb { width:72px; height:72px; object-fit:cover; border-radius:8px; cursor:pointer; border:2px solid transparent; transition:.15s; }
 .thumb:hover, .thumb.activo { border-color:var(--primary); }
@@ -48,7 +49,9 @@
     {% if imgs %}
       {% set principal = imgs | selectattr('es_principal') | list %}
       {% set first_img = (principal[0] if principal else imgs[0]).url_path %}
-      <img id="imgPrincipal" class="img-principal" src="{{ first_img }}" alt="{{ producto.nombre }}">
+      <div class="img-wrap">
+        <img id="imgPrincipal" class="img-principal" src="{{ first_img }}" alt="{{ producto.nombre }}">
+      </div>
       {% if imgs | length > 1 %}
       <div class="thumbs">
         {% for img in imgs %}
