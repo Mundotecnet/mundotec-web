@@ -288,7 +288,8 @@ async def admin_importar_syma_get(request: Request,
     # Siempre carga productos con ID_PASILLO='02', filtro adicional por búsqueda
     resultados = buscar_en_syma(busqueda)
     return templates.TemplateResponse("admin/importar_syma.html", {
-        "request": request, "resultados": resultados, "busqueda": busqueda
+        "request": request, "resultados": resultados, "busqueda": busqueda,
+        "categorias": get_categorias()
     })
 
 @app.post("/admin/catalogo/importar-syma")
@@ -312,7 +313,9 @@ async def admin_producto_edit(request: Request, prod_id: int):
     _require_admin(request)
     p = get_producto(prod_id)
     if not p: raise HTTPException(404)
-    return templates.TemplateResponse("admin/producto_edit.html", {"request": request, "p": p})
+    return templates.TemplateResponse("admin/producto_edit.html", {
+        "request": request, "p": p, "categorias": get_categorias()
+    })
 
 @app.post("/admin/catalogo/{prod_id}")
 async def admin_producto_save(request: Request, prod_id: int):

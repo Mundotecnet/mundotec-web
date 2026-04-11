@@ -40,7 +40,15 @@
       <div class="card-title">📝 Información general</div>
       <div class="fi"><label>Código SYMA</label><input type="text" value="{{ p.codigo }}" disabled style="background:#f3f4f6;color:#6b7280"></div>
       <div class="fi"><label>Nombre del producto</label><input type="text" id="f-nombre" value="{{ p.nombre }}"></div>
-      <div class="fi"><label>Categoría</label><input type="text" id="f-categoria" value="{{ p.categoria or '' }}" placeholder="Ej: Redes, Cómputo, Impresoras..."></div>
+      <div class="fi">
+        <label>Categoría</label>
+        <input type="text" id="f-categoria" value="{{ p.categoria or '' }}"
+               placeholder="Seleccione o escriba una nueva..."
+               list="cat-list" autocomplete="off">
+        <datalist id="cat-list">
+          {% for c in categorias %}<option value="{{ c }}">{% endfor %}
+        </datalist>
+      </div>
       <div class="fi"><label>Precio referencia (₡, opcional)</label><input type="number" id="f-precio" value="{{ p.precio_ref or '' }}" min="0" step="1"></div>
       <div style="display:flex;gap:1.5rem;margin-bottom:1rem;align-items:center">
         <label style="display:flex;align-items:center;gap:.5rem;font-size:.88rem;font-weight:600;cursor:pointer">
