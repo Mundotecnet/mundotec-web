@@ -21,7 +21,7 @@ from admin.config_site import (get_config, set_config_bulk, get_contactos,
                                 marcar_leido, get_stats_contacto)
 from public.catalogo_pub import (get_catalogo_publico, get_producto_publico,
                                   get_categorias_publico, registrar_contacto,
-                                  get_proyectos_publico, registrar_cotizacion,
+                                  get_hero_productos, get_proyectos_publico, registrar_cotizacion,
                                   get_cotizaciones, get_stats_cotizaciones,
                                   marcar_cotizacion_leida, get_cotizacion_by_id,
                                   registrar_pedido, get_pedidos, get_pedido_by_id,
@@ -66,12 +66,13 @@ def _save_upload(file: UploadFile, dest_dir: str, prefix: str) -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
-    cfg      = get_config()
+    cfg        = get_config()
+    hero       = get_hero_productos()
     destacados = get_catalogo_publico(destacado=True)[:6]
     proyectos  = get_proyectos_publico()[:4]
     return templates.TemplateResponse("public/index.html", {
         "request": request, "cfg": cfg,
-        "destacados": destacados, "proyectos": proyectos,
+        "hero": hero, "destacados": destacados, "proyectos": proyectos,
         "pagina": "home"
     })
 

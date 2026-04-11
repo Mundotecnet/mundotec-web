@@ -51,6 +51,10 @@
           <label class="toggle"><input type="checkbox" id="f-destacado" {{ 'checked' if p.destacado }}><span class="slider"></span></label>
           Destacado en inicio
         </label>
+        <label style="display:flex;align-items:center;gap:.5rem;font-size:.88rem;font-weight:600;cursor:pointer">
+          <label class="toggle"><input type="checkbox" id="f-en-hero" {{ 'checked' if p.en_hero }}><span class="slider"></span></label>
+          <span style="color:#6366f1">🎞 Slider principal</span>
+        </label>
       </div>
       <div class="fi"><label>Orden (menor número = primero)</label><input type="number" id="f-orden" value="{{ p.orden or 0 }}" min="0"></div>
     </div>
@@ -157,6 +161,7 @@ async function guardarInfo() {
     precio_ref:      parseFloat(document.getElementById('f-precio').value) || null,
     activo:          document.getElementById('f-activo').checked,
     destacado:       document.getElementById('f-destacado').checked,
+    en_hero:         document.getElementById('f-en-hero').checked,
     orden:           parseInt(document.getElementById('f-orden').value) || 0,
   };
   const r   = await fetch(`/admin/catalogo/${PROD_ID}`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data) });

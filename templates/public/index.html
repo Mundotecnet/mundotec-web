@@ -3,16 +3,12 @@
 
 {% block head %}
 <style>
-/* ── HERO ── */
+/* ── HERO ESTÁTICO (fallback sin productos en slider) ── */
 .hero {
   background: linear-gradient(135deg, var(--dark) 0%, var(--primary) 100%);
   color: #fff; padding: 7rem 5% 5rem;
   min-height: 90vh; display:flex; align-items:center;
   position:relative; overflow:hidden;
-}
-.hero::before {
-  content:''; position:absolute; inset:0;
-  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
 }
 .hero-content { position:relative; max-width:700px; }
 .hero-badge {
@@ -24,6 +20,110 @@
 .hero h1 span { color:var(--accent); }
 .hero p { font-size:1.1rem; color:rgba(255,255,255,.8); margin-bottom:2rem; line-height:1.7; max-width:550px; }
 .hero-btns { display:flex; gap:1rem; flex-wrap:wrap; }
+
+/* ── HERO SLIDER (con productos) ── */
+.hs-wrap {
+  position: relative;
+  width: 100%;
+  height: 88vh;
+  min-height: 500px;
+  overflow: hidden;
+  background: #f5f5f5;
+}
+.hs-slide {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  opacity: 0;
+  transition: opacity .7s ease;
+  pointer-events: none;
+}
+.hs-slide.active { opacity:1; pointer-events:auto; }
+
+/* Panel izquierdo */
+.hs-left {
+  width: 44%;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 4rem 4rem 4rem 6%;
+  position: relative;
+  z-index: 2;
+  clip-path: polygon(0 0, 92% 0, 100% 100%, 0 100%);
+}
+.hs-cat {
+  font-size: .75rem; font-weight: 700;
+  color: var(--accent); text-transform: uppercase;
+  letter-spacing: .12em; margin-bottom: .9rem;
+}
+.hs-title {
+  font-size: clamp(1.6rem, 3vw, 2.6rem);
+  font-weight: 900; line-height: 1.15;
+  color: #0d1b2a; margin-bottom: 1rem;
+}
+.hs-desc {
+  font-size: .95rem; color: #4b5563;
+  line-height: 1.7; margin-bottom: 2rem;
+  max-width: 340px;
+}
+.hs-btns { display:flex; gap:.8rem; flex-wrap:wrap; }
+
+/* Panel derecho — imagen */
+.hs-right {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+.hs-right img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.hs-right .hs-placeholder {
+  width: 100%; height: 100%;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--dark) 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 8rem;
+}
+
+/* Controles */
+.hs-controls {
+  position: absolute;
+  bottom: 1.8rem; left: 6%;
+  display: flex; align-items: center; gap: 1rem;
+  z-index: 10;
+}
+.hs-dots { display:flex; gap:.5rem; }
+.hs-dot {
+  width: 8px; height: 8px; border-radius: 4px;
+  background: #d1d5db; cursor: pointer;
+  transition: width .3s, background .3s;
+}
+.hs-dot.active { width: 28px; background: var(--accent); }
+.hs-arrows { display:flex; gap:.5rem; }
+.hs-arrow {
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 2px solid #d1d5db;
+  background: #fff; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .9rem; color: #374151;
+  transition: border-color .2s, color .2s;
+}
+.hs-arrow:hover { border-color: var(--accent); color: var(--accent); }
+.hs-counter {
+  font-size: .78rem; font-weight: 700; color: #9ca3af;
+  letter-spacing: .05em;
+}
+
+@media(max-width:768px){
+  .hs-wrap { height: auto; min-height: unset; }
+  .hs-slide { position:relative; flex-direction:column; opacity:1 !important; display:none; pointer-events:auto; }
+  .hs-slide.active { display:flex; }
+  .hs-left { width:100%; clip-path:none; padding:2.5rem 1.2rem 1.5rem; }
+  .hs-right { height: 55vw; }
+  .hs-controls { left:1.2rem; }
+}
 
 /* ── STATS ── */
 .stats-bar {
@@ -76,6 +176,96 @@
 {% block content %}
 
 <!-- ── HERO ── -->
+{% if hero %}
+<!-- Slider de productos -->
+<div class="hs-wrap" id="hsWrap">
+  {% for p in hero %}
+  <div class="hs-slide{% if loop.first %} active{% endif %}">
+
+    <!-- Izquierda: texto -->
+    <div class="hs-left">
+      {% if p.categoria %}<div class="hs-cat">{{ p.categoria }}</div>{% endif %}
+      <div class="hs-title">{{ p.nombre }}</div>
+      {% if p.descripcion_web %}
+        <div class="hs-desc">{{ p.descripcion_web[:140] }}{% if p.descripcion_web|length > 140 %}…{% endif %}</div>
+      {% endif %}
+      <div class="hs-btns">
+        <a href="/catalogo/{{ p.id }}" class="btn btn-accent">Ver producto</a>
+        <a href="/catalogo" class="btn btn-outline">Ver catálogo</a>
+      </div>
+    </div>
+
+    <!-- Derecha: imagen -->
+    <div class="hs-right">
+      {% if p.imagen_principal %}
+        <img src="{{ p.imagen_principal }}" alt="{{ p.nombre }}">
+      {% else %}
+        <div class="hs-placeholder">📦</div>
+      {% endif %}
+    </div>
+
+  </div>
+  {% endfor %}
+
+  <!-- Controles (solo si hay más de 1) -->
+  {% if hero|length > 1 %}
+  <div class="hs-controls">
+    <div class="hs-dots" id="hsDots">
+      {% for p in hero %}
+      <div class="hs-dot{% if loop.first %} active{% endif %}" onclick="hsGo({{ loop.index0 }})"></div>
+      {% endfor %}
+    </div>
+    <div class="hs-arrows">
+      <button class="hs-arrow" onclick="hsMove(-1)">&#8592;</button>
+      <button class="hs-arrow" onclick="hsMove(1)">&#8594;</button>
+    </div>
+    <span class="hs-counter" id="hsCtr">1 / {{ hero|length }}</span>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+(function(){
+  const slides = document.querySelectorAll('.hs-slide');
+  const dots   = document.querySelectorAll('.hs-dot');
+  const ctr    = document.getElementById('hsCtr');
+  const total  = slides.length;
+  if(total <= 1) return;
+  let cur = 0, timer;
+
+  function go(n){
+    slides[cur].classList.remove('active');
+    dots[cur].classList.remove('active');
+    cur = (n + total) % total;
+    slides[cur].classList.add('active');
+    dots[cur].classList.add('active');
+    if(ctr) ctr.textContent = (cur+1) + ' / ' + total;
+    reset();
+  }
+  function reset(){
+    clearInterval(timer);
+    timer = setInterval(() => go(cur+1), 6000);
+  }
+  window.hsMove = d => go(cur+d);
+  window.hsGo   = n => go(n);
+
+  const wrap = document.getElementById('hsWrap');
+  wrap.addEventListener('mouseenter', () => clearInterval(timer));
+  wrap.addEventListener('mouseleave', reset);
+
+  let sx;
+  wrap.addEventListener('touchstart', e => sx = e.touches[0].clientX, {passive:true});
+  wrap.addEventListener('touchend',   e => {
+    const dx = e.changedTouches[0].clientX - sx;
+    if(Math.abs(dx) > 40) go(cur + (dx < 0 ? 1 : -1));
+  }, {passive:true});
+
+  reset();
+})();
+</script>
+
+{% else %}
+<!-- Fallback: hero estático si no hay productos en slider -->
 <section class="hero">
   <div class="hero-content">
     <div class="hero-badge">🔧 Soluciones tecnológicas profesionales</div>
@@ -87,6 +277,7 @@
     </div>
   </div>
 </section>
+{% endif %}
 
 <!-- ── STATS ── -->
 <div class="stats-bar">

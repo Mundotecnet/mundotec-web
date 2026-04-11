@@ -1,5 +1,17 @@
 from db import query, execute
 
+def get_hero_productos() -> list:
+    """Productos marcados para el slider principal (en_hero=TRUE), con imagen principal."""
+    return query("""
+        SELECT p.id, p.nombre, p.descripcion_web, p.categoria, p.precio_ref,
+               i.url_path AS imagen_principal
+        FROM catalogo_productos p
+        LEFT JOIN catalogo_imagenes i ON i.producto_id=p.id AND i.es_principal=TRUE
+        WHERE p.activo=TRUE AND p.en_hero=TRUE
+        ORDER BY p.orden, p.nombre
+        LIMIT 8
+    """)
+
 def get_catalogo_publico(categoria="", busqueda="", destacado=False) -> list:
     filtros = ["p.activo = TRUE"]
     params  = []

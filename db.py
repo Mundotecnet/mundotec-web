@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS catalogo_productos (
     categoria        VARCHAR(150),
     activo           BOOLEAN      DEFAULT TRUE,
     destacado        BOOLEAN      DEFAULT FALSE,
+    en_hero          BOOLEAN      DEFAULT FALSE,
     orden            INT          DEFAULT 0,
     ficha_path       VARCHAR(500),
     precio_ref       NUMERIC(15,2),
