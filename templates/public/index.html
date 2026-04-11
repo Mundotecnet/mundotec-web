@@ -172,7 +172,7 @@
   const cards  = track.querySelectorAll('.cr-card');
   const total  = cards.length;
   if(total < 2) return;
-  let pos = 0;
+  let pos = 0, timer;
 
   function visible(){
     if(window.innerWidth <= 600) return 1;
@@ -182,22 +182,38 @@
 
   function move(d){
     const max = Math.max(0, total - visible());
-    pos = Math.min(max, Math.max(0, pos + d));
-    const card  = cards[0];
-    const gap   = parseFloat(getComputedStyle(track).gap) || 19;
-    const step  = card.offsetWidth + gap;
+    // al llegar al final vuelve al inicio
+    if(d > 0 && pos >= max) pos = 0;
+    else if(d < 0 && pos <= 0) pos = max;
+    else pos = Math.min(max, Math.max(0, pos + d));
+    const gap  = parseFloat(getComputedStyle(track).gap) || 19;
+    const step = cards[0].offsetWidth + gap;
     track.style.transform = `translateX(-${pos * step}px)`;
+    resetTimer();
+  }
+
+  function resetTimer(){
+    clearInterval(timer);
+    timer = setInterval(() => move(1), 3000);
   }
 
   window.crMove = move;
 
-  // swipe
+  // pausar al pasar el mouse
+  const wrap = track.closest('.cr-viewport') || track.parentElement;
+  wrap.addEventListener('mouseenter', () => clearInterval(timer));
+  wrap.addEventListener('mouseleave', resetTimer);
+
+  // swipe táctil
   let sx;
-  track.addEventListener('touchstart', e => sx = e.touches[0].clientX, {passive:true});
+  track.addEventListener('touchstart', e => { sx = e.touches[0].clientX; clearInterval(timer); }, {passive:true});
   track.addEventListener('touchend',   e => {
     const dx = e.changedTouches[0].clientX - sx;
     if(Math.abs(dx) > 40) move(dx < 0 ? 1 : -1);
+    else resetTimer();
   }, {passive:true});
+
+  resetTimer();
 })();
 </script>
 {% endif %}
