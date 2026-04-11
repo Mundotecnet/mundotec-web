@@ -17,6 +17,7 @@ from admin.catalogo    import (get_catalogo, get_producto, crear_producto, actua
 from admin.proyectos   import (get_proyectos, get_proyecto, crear_proyecto,
                                 actualizar_proyecto, actualizar_imagen_proyecto,
                                 eliminar_proyecto, get_categorias_proyectos)
+from admin.importar_imagenes import listar_pendientes, ejecutar_importacion
 from admin.config_site import (get_config, set_config_bulk, get_contactos,
                                 marcar_leido, get_stats_contacto)
 from public.catalogo_pub import (get_catalogo_publico, get_producto_publico,
@@ -514,6 +515,25 @@ async def admin_pedido_link_pago(request: Request, pid: int):
     except Exception:
         pass
     return {"ok": True}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ADMIN — Importar imágenes
+# ─────────────────────────────────────────────────────────────────────────────
+@app.get("/admin/importar-imagenes", response_class=HTMLResponse)
+async def admin_importar_imagenes_get(request: Request):
+    _require_admin(request)
+    pendientes = listar_pendientes()
+    return templates.TemplateResponse("admin/importar_imagenes.html", {
+        "request": request, "pendientes": pendientes
+    })
+
+@app.post("/admin/importar-imagenes/ejecutar")
+async def admin_importar_imagenes_post(request: Request):
+    _require_admin(request)
+    data   = await request.json()
+    forzar = data.get("forzar", False)
+    result = ejecutar_importacion(forzar=forzar)
+    return JSONResponse(result)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ADMIN — Configuración del sitio
