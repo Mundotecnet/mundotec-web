@@ -1,0 +1,293 @@
+{% extends "admin/base.html" %}
+{% block title %}Generar descripciones IA{% endblock %}
+{% block topbar_title %}🤖 Generador de descripciones con IA{% endblock %}
+{% block topbar_actions %}
+  <a href="/admin/catalogo" class="btn btn-ghost btn-sm">← Catálogo</a>
+{% endblock %}
+
+{% block head %}
+<style>
+.ia-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:1.2rem; }
+
+.ia-card {
+  background:#fff; border-radius:12px; box-shadow:0 1px 8px rgba(0,0,0,.08);
+  border:2px solid #e5e7eb; overflow:hidden;
+  display:flex; flex-direction:column;
+  transition:border-color .2s;
+}
+.ia-card.aprobado  { border-color:#22c55e; }
+.ia-card.generando { border-color:#f59e0b; opacity:.85; }
+.ia-card.error-api { border-color:#ef4444; }
+
+/* cabecera */
+.ia-head {
+  display:flex; gap:.8rem; align-items:center;
+  padding:.8rem 1rem; border-bottom:1px solid #f0f0f0;
+  background:#fafafa;
+}
+.ia-thumb {
+  width:56px; height:56px; border-radius:8px; flex-shrink:0;
+  background:#f1f5f9; border:1px solid #e2e8f0; overflow:hidden;
+  display:flex; align-items:center; justify-content:center; font-size:1.4rem;
+}
+.ia-thumb img { width:100%; height:100%; object-fit:contain; }
+.ia-meta { flex:1; min-width:0; }
+.ia-codigo { font-size:.68rem; color:#9ca3af; font-family:monospace; }
+.ia-nombre { font-size:.85rem; font-weight:700; color:#0d1b2a; line-height:1.3;
+             white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ia-cat    { font-size:.7rem; color:var(--accent); font-weight:600; }
+
+/* estado badge */
+.ia-status {
+  font-size:.68rem; font-weight:700; padding:2px 8px; border-radius:20px;
+  flex-shrink:0; align-self:flex-start;
+}
+.status-sin  { background:#fef3c7; color:#92400e; }
+.status-ok   { background:#dcfce7; color:#166534; }
+.status-gen  { background:#fef9c3; color:#713f12; }
+
+/* cuerpo */
+.ia-body { padding:.9rem 1rem; flex:1; }
+
+.ia-label { font-size:.68rem; font-weight:700; color:#6b7280;
+            text-transform:uppercase; letter-spacing:.05em; margin-bottom:.3rem; }
+
+.ia-desc {
+  width:100%; border:1.5px solid #e5e7eb; border-radius:8px;
+  padding:.5rem .7rem; font-size:.83rem; color:#111; font-family:inherit;
+  resize:vertical; min-height:70px; line-height:1.5;
+  background:#f9fafb;
+}
+.ia-desc:focus { border-color:var(--primary); background:#fff; outline:none; }
+
+.ia-chars { margin-top:.7rem; }
+.ia-char-item {
+  display:flex; align-items:flex-start; gap:.4rem;
+  margin-bottom:.3rem;
+}
+.ia-char-item::before { content:'•'; color:var(--accent); font-weight:700; flex-shrink:0; margin-top:1px; }
+.ia-char-input {
+  flex:1; border:1.5px solid #e5e7eb; border-radius:6px;
+  padding:3px 7px; font-size:.8rem; font-family:inherit; color:#374151;
+  background:#f9fafb;
+}
+.ia-char-input:focus { border-color:var(--primary); background:#fff; outline:none; }
+
+/* footer */
+.ia-footer {
+  padding:.7rem 1rem; border-top:1px solid #f0f0f0;
+  display:flex; gap:.5rem; align-items:center; background:#fafafa;
+}
+.ia-spinner { display:none; width:16px; height:16px; border:2px solid #d1d5db;
+              border-top-color:var(--primary); border-radius:50%;
+              animation:spin .6s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* barra superior */
+.ia-toolbar {
+  display:flex; gap:.8rem; align-items:center; flex-wrap:wrap;
+  margin-bottom:1.2rem; padding:.8rem 1rem;
+  background:#fff; border-radius:10px; box-shadow:0 1px 6px rgba(0,0,0,.06);
+}
+.ia-toolbar span { font-size:.85rem; color:#6b7280; }
+.counter { font-weight:700; color:var(--primary); }
+
+/* sin api key */
+.no-key {
+  background:#fef2f2; border:1px solid #fecaca; border-radius:10px;
+  padding:1.5rem; margin-bottom:1.2rem; display:flex; gap:.8rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% if not api_ok %}
+<div class="no-key">
+  <span style="font-size:1.5rem">⚠️</span>
+  <div>
+    <strong>API Key de Claude no configurada.</strong><br>
+    Agregue la variable de entorno <code>ANTHROPIC_API_KEY=sk-ant-...</code>
+    en el archivo del servicio systemd o en <code>config.py</code> y reinicie el servicio.
+  </div>
+</div>
+{% endif %}
+
+<!-- Toolbar -->
+<div class="ia-toolbar">
+  <span>
+    <span class="counter" id="cnt-total">{{ productos|length }}</span> productos ·
+    <span class="counter" id="cnt-sin">{{ productos|selectattr('descripcion_web','equalto',None)|list|length + productos|selectattr('descripcion_web','equalto','')|list|length }}</span> sin descripción ·
+    <span class="counter" id="cnt-aprobados">0</span> aprobados en esta sesión
+  </span>
+  <div style="margin-left:auto;display:flex;gap:.5rem">
+    <button onclick="generarTodos()" class="btn btn-accent btn-sm" {% if not api_ok %}disabled{% endif %}>
+      ⚡ Generar todos los que faltan
+    </button>
+    <button onclick="aprobarTodos()" class="btn btn-primary btn-sm">
+      ✅ Aprobar todos generados
+    </button>
+  </div>
+</div>
+
+<!-- Grid de productos -->
+<div class="ia-grid" id="iaGrid">
+{% for p in productos %}
+<div class="ia-card {% if p.descripcion_web %}aprobado{% endif %}"
+     id="card-{{ p.id }}" data-id="{{ p.id }}">
+
+  <!-- Cabecera -->
+  <div class="ia-head">
+    <div class="ia-thumb">
+      {% if p.imagen_principal %}<img src="{{ p.imagen_principal }}" alt="">
+      {% else %}📦{% endif %}
+    </div>
+    <div class="ia-meta">
+      <div class="ia-codigo">{{ p.codigo }}</div>
+      <div class="ia-nombre" title="{{ p.nombre }}">{{ p.nombre }}</div>
+      {% if p.categoria %}<div class="ia-cat">{{ p.categoria }}</div>{% endif %}
+    </div>
+    <span class="ia-status {% if p.descripcion_web %}status-ok{% else %}status-sin{% endif %}"
+          id="status-{{ p.id }}">
+      {% if p.descripcion_web %}✅ Con desc{% else %}⏳ Sin desc{% endif %}
+    </span>
+  </div>
+
+  <!-- Cuerpo -->
+  <div class="ia-body">
+    <div class="ia-label">Descripción web</div>
+    <textarea class="ia-desc" id="desc-{{ p.id }}"
+              placeholder="Haga clic en 'Generar' para obtener una sugerencia...">{{ p.descripcion_web or '' }}</textarea>
+
+    <div class="ia-chars" id="chars-{{ p.id }}">
+      <div class="ia-label" style="margin-top:.7rem">Características</div>
+      <!-- se llenarán al generar -->
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="ia-footer">
+    <div class="ia-spinner" id="spin-{{ p.id }}"></div>
+    <button onclick="generar({{ p.id }}, '{{ p.nombre|replace("'","\\'") }}', '{{ (p.categoria or '')|replace("'","\\'") }}', '{{ (p.descripcion_syma or '')|replace("'","\\'")|replace('\n',' ')[:120] }}')"
+            class="btn btn-ghost btn-sm" {% if not api_ok %}disabled{% endif %}
+            id="btn-gen-{{ p.id }}">
+      🤖 Generar
+    </button>
+    <button onclick="aprobar({{ p.id }})"
+            class="btn btn-primary btn-sm" style="margin-left:auto"
+            id="btn-ap-{{ p.id }}">
+      ✅ Aprobar
+    </button>
+  </div>
+
+</div>
+{% endfor %}
+</div>
+
+<script>
+let aprobados = 0;
+
+// ── Generar descripción para un producto ──────────────────────────────────────
+async function generar(id, nombre, categoria, descSyma) {
+  const card  = document.getElementById(`card-${id}`);
+  const spin  = document.getElementById(`spin-${id}`);
+  const btnG  = document.getElementById(`btn-gen-${id}`);
+  const badge = document.getElementById(`status-${id}`);
+
+  card.className  = 'ia-card generando';
+  spin.style.display = 'inline-block';
+  btnG.disabled   = true;
+  badge.className = 'ia-status status-gen';
+  badge.textContent = '⏳ Generando…';
+
+  try {
+    const r = await fetch('/admin/generar-desc/generar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, nombre, categoria, descripcion_syma: descSyma })
+    });
+    const d = await r.json();
+
+    if (d.error) throw new Error(d.error);
+
+    // Descripción
+    document.getElementById(`desc-${id}`).value = d.descripcion;
+
+    // Características
+    const charsDiv = document.getElementById(`chars-${id}`);
+    charsDiv.innerHTML = '<div class="ia-label" style="margin-top:.7rem">Características</div>';
+    (d.caracteristicas || []).forEach((c, i) => {
+      const row = document.createElement('div');
+      row.className = 'ia-char-item';
+      row.innerHTML = `<input class="ia-char-input" id="char-${id}-${i}" value="${c.replace(/"/g,'&quot;')}">`;
+      charsDiv.appendChild(row);
+    });
+
+    card.className  = 'ia-card';
+    badge.className = 'ia-status status-gen';
+    badge.textContent = '🤖 Sugerido';
+
+  } catch(e) {
+    card.className  = 'ia-card error-api';
+    badge.className = 'ia-status';
+    badge.style.background = '#fee2e2'; badge.style.color = '#991b1b';
+    badge.textContent = '❌ Error';
+    document.getElementById(`desc-${id}`).placeholder = 'Error: ' + e.message;
+  }
+
+  spin.style.display = 'none';
+  btnG.disabled = false;
+}
+
+// ── Aprobar y guardar ─────────────────────────────────────────────────────────
+async function aprobar(id) {
+  const desc  = document.getElementById(`desc-${id}`).value.trim();
+  if (!desc) { alert('No hay descripción para aprobar.'); return; }
+
+  // Recoger características editadas
+  const chars = [];
+  document.querySelectorAll(`[id^="char-${id}-"]`).forEach(el => {
+    if (el.value.trim()) chars.push(el.value.trim());
+  });
+
+  const r = await fetch('/admin/generar-desc/aprobar', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, descripcion_web: desc, caracteristicas: chars })
+  });
+
+  if (r.ok) {
+    const card  = document.getElementById(`card-${id}`);
+    const badge = document.getElementById(`status-${id}`);
+    card.className  = 'ia-card aprobado';
+    badge.className = 'ia-status status-ok';
+    badge.textContent = '✅ Aprobado';
+    aprobados++;
+    document.getElementById('cnt-aprobados').textContent = aprobados;
+  }
+}
+
+// ── Generar todos los que no tienen descripción ───────────────────────────────
+async function generarTodos() {
+  const cards = document.querySelectorAll('.ia-card:not(.aprobado)');
+  for (const card of cards) {
+    const id  = card.dataset.id;
+    const btn = document.getElementById(`btn-gen-${id}`);
+    if (!btn || btn.disabled) continue;
+    // leer data del botón generar
+    btn.click();
+    await new Promise(r => setTimeout(r, 1800)); // esperar entre llamadas
+  }
+}
+
+// ── Aprobar todos los que tienen sugerencia ───────────────────────────────────
+async function aprobarTodos() {
+  const cards = document.querySelectorAll('.ia-card:not(.aprobado)');
+  for (const card of cards) {
+    const id = card.dataset.id;
+    const desc = document.getElementById(`desc-${id}`)?.value.trim();
+    if (desc) await aprobar(id);
+  }
+}
+</script>
+{% endblock %}

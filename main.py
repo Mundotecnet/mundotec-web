@@ -18,6 +18,7 @@ from admin.proyectos   import (get_proyectos, get_proyecto, crear_proyecto,
                                 actualizar_proyecto, actualizar_imagen_proyecto,
                                 eliminar_proyecto, get_categorias_proyectos)
 from admin.importar_imagenes import listar_pendientes, ejecutar_importacion
+from admin.generar_desc import generar_descripcion, get_productos_sin_descripcion
 from admin.config_site import (get_config, set_config_bulk, get_contactos,
                                 marcar_leido, get_stats_contacto)
 from public.catalogo_pub import (get_catalogo_publico, get_producto_publico,
@@ -532,6 +533,53 @@ async def admin_pedido_link_pago(request: Request, pid: int):
     except Exception:
         pass
     return {"ok": True}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ADMIN — Generador de descripciones IA
+# ─────────────────────────────────────────────────────────────────────────────
+@app.get("/admin/generar-desc", response_class=HTMLResponse)
+async def admin_generar_desc_get(request: Request):
+    _require_admin(request)
+    from config import ANTHROPIC_API_KEY
+    productos = get_productos_sin_descripcion()
+    return templates.TemplateResponse("admin/generar_desc.html", {
+        "request": request,
+        "productos": productos,
+        "api_ok": bool(ANTHROPIC_API_KEY),
+    })
+
+@app.post("/admin/generar-desc/generar")
+async def admin_generar_desc_post(request: Request):
+    _require_admin(request)
+    data = await request.json()
+    try:
+        result = generar_descripcion(
+            nombre          = data.get("nombre", ""),
+            categoria       = data.get("categoria", ""),
+            descripcion_syma= data.get("descripcion_syma", ""),
+        )
+        return JSONResponse(result)
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+@app.post("/admin/generar-desc/aprobar")
+async def admin_aprobar_desc_post(request: Request):
+    _require_admin(request)
+    data    = await request.json()
+    prod_id = data.get("id")
+    desc    = data.get("descripcion_web", "")
+    chars   = data.get("caracteristicas", [])
+    from db import execute
+    execute("UPDATE catalogo_productos SET descripcion_web=%s, actualizado_en=NOW() WHERE id=%s",
+            (desc, prod_id))
+    # Guardar características como specs si no tenía
+    if chars:
+        existing = dbq("SELECT id FROM catalogo_specs WHERE producto_id=%s LIMIT 1", (prod_id,))
+        if not existing:
+            for i, c in enumerate(chars):
+                dbx("INSERT INTO catalogo_specs (producto_id, etiqueta, valor, orden) VALUES (%s,%s,%s,%s)",
+                    (prod_id, f"Característica {i+1}", c, i))
+    return JSONResponse({"ok": True})
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ADMIN — Importar imágenes
