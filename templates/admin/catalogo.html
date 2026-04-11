@@ -2,31 +2,77 @@
 {% block title %}Catálogo{% endblock %}
 {% block topbar_title %}📦 Catálogo de Productos{% endblock %}
 {% block topbar_actions %}
-  <a href="/admin/catalogo/importar-syma" class="btn btn-accent btn-sm">⬇ Importar de SYMA</a>
+  <a href="/admin/catalogo/importar-syma"   class="btn btn-accent btn-sm">⬇ Importar de SYMA</a>
+  <a href="/admin/importar-imagenes"        class="btn btn-ghost  btn-sm">🖼️ Importar imágenes</a>
 {% endblock %}
+
 {% block head %}
 <style>
-.filtros { display:flex; gap:.8rem; flex-wrap:wrap; margin-bottom:1.5rem; align-items:flex-end; }
-.filtros input, .filtros select { padding:8px 12px; border:1.5px solid #d1d5db; border-radius:7px; font-size:.88rem; }
-.prod-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:1.2rem; }
-.pc { background:#fff; border-radius:10px; box-shadow:0 1px 8px rgba(0,0,0,.07); overflow:hidden; display:flex; flex-direction:column; }
-.pc-img { height:160px; background:#f3f4f6; display:flex; align-items:center; justify-content:center; font-size:2.5rem; overflow:hidden; position:relative; }
-.pc-img img { width:100%; height:100%; object-fit:cover; }
-.pc-badges { position:absolute; top:.5rem; left:.5rem; display:flex; gap:.3rem; }
-.pc-body { padding:1rem; flex:1; }
-.pc-code { font-size:.7rem; color:#9ca3af; margin-bottom:.2rem; }
-.pc-name { font-size:.9rem; font-weight:700; color:#111; margin-bottom:.3rem; line-height:1.4; }
-.pc-cat  { font-size:.72rem; color:#E67E22; font-weight:600; }
-.pc-footer { padding:.7rem 1rem; border-top:1px solid #f0f0f0; display:flex; gap:.5rem; }
-.sin { text-align:center; padding:4rem; color:#9ca3af; grid-column:1/-1; }
+/* ── Filtros ── */
+.filtros { display:flex; gap:.8rem; flex-wrap:wrap; margin-bottom:1.2rem; align-items:center; }
+.filtros input, .filtros select {
+  padding:7px 11px; border:1.5px solid #d1d5db; border-radius:7px; font-size:.87rem;
+}
+
+/* ── Tabla ── */
+.cat-table { width:100%; border-collapse:collapse; font-size:.85rem; }
+.cat-table thead th {
+  text-align:left; padding:.55rem .7rem;
+  background:#f1f5f9; color:#475569; font-size:.74rem;
+  font-weight:700; text-transform:uppercase; letter-spacing:.04em;
+  border-bottom:2px solid #e2e8f0; white-space:nowrap;
+}
+.cat-table tbody tr { border-bottom:1px solid #f0f0f0; transition:background .1s; }
+.cat-table tbody tr:hover { background:#fafbfc; }
+.cat-table td { padding:.5rem .7rem; vertical-align:middle; }
+
+/* Miniatura */
+.prod-thumb {
+  width:48px; height:48px; border-radius:8px; object-fit:cover;
+  background:#f3f4f6; display:flex; align-items:center;
+  justify-content:center; font-size:1.3rem; overflow:hidden; flex-shrink:0;
+}
+.prod-thumb img { width:100%; height:100%; object-fit:cover; border-radius:8px; }
+
+/* Inputs inline */
+.ie {
+  width:100%; border:1.5px solid transparent; border-radius:6px;
+  padding:4px 7px; font-size:.84rem; background:transparent;
+  font-family:inherit; color:#111; transition:border-color .15s, background .15s;
+}
+.ie:hover { border-color:#d1d5db; background:#fff; }
+.ie:focus { border-color:var(--primary); background:#fff; outline:none; box-shadow:0 0 0 3px rgba(30,78,140,.1); }
+.ie-precio { width:110px; text-align:right; }
+.ie-orden  { width:58px; text-align:center; }
+.ie-nombre { min-width:200px; font-weight:600; }
+
+/* Toggles compactos */
+.tog-row { display:flex; gap:.5rem; align-items:center; }
+.tog-lbl { display:flex; flex-direction:column; align-items:center; gap:2px; }
+.tog-lbl span { font-size:.6rem; color:#9ca3af; font-weight:600; text-transform:uppercase; }
+
+/* Indicador de guardado */
+.saving-dot {
+  width:7px; height:7px; border-radius:50%;
+  background:#d1d5db; display:inline-block; margin-left:4px;
+  transition:background .3s;
+}
+.saving-dot.saving  { background:#f59e0b; }
+.saving-dot.saved   { background:#22c55e; }
+.saving-dot.error   { background:#ef4444; }
+
+/* Barra info */
+.cat-info { display:flex; justify-content:space-between; align-items:center; margin-bottom:.8rem; }
+.cat-info span { font-size:.82rem; color:#9ca3af; }
 </style>
 {% endblock %}
+
 {% block content %}
 
 <!-- Filtros -->
 <form method="get" action="/admin/catalogo">
   <div class="filtros">
-    <input type="text" name="busqueda" placeholder="🔍 Buscar..." value="{{ busqueda }}" style="flex:1;min-width:200px">
+    <input type="text" name="busqueda" placeholder="🔍 Buscar producto..." value="{{ busqueda }}" style="flex:1;min-width:200px">
     <select name="categoria">
       <option value="">Todas las categorías</option>
       {% for c in categorias %}
@@ -40,50 +86,210 @@
   </div>
 </form>
 
-<p style="font-size:.82rem;color:#9ca3af;margin-bottom:1rem">{{ productos|length }} producto(s) encontrados</p>
+<div class="cat-info">
+  <span>{{ productos|length }} producto(s) — edite los campos directamente en la tabla y se guardan al salir del campo</span>
+  <span style="font-size:.75rem;color:#d1d5db">● guardando &nbsp; ● guardado &nbsp; ● error</span>
+</div>
 
 {% if productos %}
-<div class="prod-grid">
-  {% for p in productos %}
-  <div class="pc">
-    <div class="pc-img">
-      {% if p.imagenes is defined and p.imagenes %}
-        <img src="{{ p.imagenes[0].url_path }}" alt="{{ p.nombre }}">
-      {% else %}
-        📦
-      {% endif %}
-      <div class="pc-badges">
-        {% if p.activo %}<span class="badge badge-green">Activo</span>{% else %}<span class="badge badge-red">Inactivo</span>{% endif %}
-        {% if p.destacado %}<span class="badge badge-orange">⭐ Destacado</span>{% endif %}
-        {% if p.en_hero %}<span class="badge" style="background:#6366f1;color:#fff">🎞</span>{% endif %}
-      </div>
-    </div>
-    <div class="pc-body">
-      <div class="pc-code">{{ p.codigo }}</div>
-      <div class="pc-name">{{ p.nombre }}</div>
-      {% if p.categoria %}<div class="pc-cat">{{ p.categoria }}</div>{% endif %}
-    </div>
-    <div class="pc-footer">
-      <a href="/admin/catalogo/{{ p.id }}" class="btn btn-primary btn-sm" style="flex:1;justify-content:center">✏️ Editar</a>
-      <button onclick="eliminarProducto({{ p.id }}, '{{ p.nombre|replace("'","") }}')" class="btn btn-danger btn-sm">🗑</button>
-    </div>
-  </div>
-  {% endfor %}
+<div class="card" style="padding:0;overflow:auto">
+<table class="cat-table">
+  <thead>
+    <tr>
+      <th style="width:56px"></th>
+      <th>Código</th>
+      <th>Nombre</th>
+      <th>Categoría</th>
+      <th>Precio ₡</th>
+      <th>Orden</th>
+      <th style="text-align:center">Activo</th>
+      <th style="text-align:center">Destacado</th>
+      <th style="text-align:center">🎞 Slider</th>
+      <th style="width:90px"></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for p in productos %}
+    <tr id="row-{{ p.id }}" data-id="{{ p.id }}">
+
+      <!-- Miniatura -->
+      <td>
+        <div class="prod-thumb">
+          {% if p.imagen_principal %}
+            <img src="{{ p.imagen_principal }}" alt="">
+          {% else %}📦{% endif %}
+        </div>
+      </td>
+
+      <!-- Código -->
+      <td>
+        <span style="font-family:monospace;font-size:.78rem;color:#6b7280">{{ p.codigo }}</span>
+        <span class="saving-dot" id="dot-{{ p.id }}"></span>
+      </td>
+
+      <!-- Nombre -->
+      <td>
+        <input class="ie ie-nombre" type="text"
+               value="{{ p.nombre }}"
+               data-field="nombre" data-id="{{ p.id }}"
+               onblur="guardarCampo(this)" onkeydown="enterBlur(event,this)">
+      </td>
+
+      <!-- Categoría -->
+      <td>
+        <input class="ie" type="text" style="min-width:130px"
+               value="{{ p.categoria or '' }}"
+               placeholder="—"
+               list="cat-list"
+               data-field="categoria" data-id="{{ p.id }}"
+               onblur="guardarCampo(this)" onkeydown="enterBlur(event,this)">
+      </td>
+
+      <!-- Precio -->
+      <td>
+        <input class="ie ie-precio" type="number"
+               value="{{ p.precio_ref or '' }}"
+               placeholder="0" min="0" step="1"
+               data-field="precio_ref" data-id="{{ p.id }}"
+               onblur="guardarCampo(this)" onkeydown="enterBlur(event,this)">
+      </td>
+
+      <!-- Orden -->
+      <td>
+        <input class="ie ie-orden" type="number"
+               value="{{ p.orden or 0 }}"
+               min="0"
+               data-field="orden" data-id="{{ p.id }}"
+               onblur="guardarCampo(this)" onkeydown="enterBlur(event,this)">
+      </td>
+
+      <!-- Activo -->
+      <td style="text-align:center">
+        <label class="toggle">
+          <input type="checkbox" {{ 'checked' if p.activo }}
+                 data-field="activo" data-id="{{ p.id }}"
+                 onchange="guardarToggle(this)">
+          <span class="slider"></span>
+        </label>
+      </td>
+
+      <!-- Destacado -->
+      <td style="text-align:center">
+        <label class="toggle">
+          <input type="checkbox" {{ 'checked' if p.destacado }}
+                 data-field="destacado" data-id="{{ p.id }}"
+                 onchange="guardarToggle(this)">
+          <span class="slider"></span>
+        </label>
+      </td>
+
+      <!-- En Hero (Slider) -->
+      <td style="text-align:center">
+        <label class="toggle">
+          <input type="checkbox" {{ 'checked' if p.en_hero }}
+                 data-field="en_hero" data-id="{{ p.id }}"
+                 onchange="guardarToggle(this)">
+          <span class="slider"></span>
+        </label>
+      </td>
+
+      <!-- Acciones -->
+      <td>
+        <div style="display:flex;gap:.3rem">
+          <a href="/admin/catalogo/{{ p.id }}" class="btn btn-primary btn-sm" title="Imágenes, specs, ficha">🖼️</a>
+          <button onclick="eliminarProducto({{ p.id }}, '{{ p.nombre|replace("'","\\'")|replace('"','') }}')"
+                  class="btn btn-danger btn-sm" title="Eliminar">🗑</button>
+        </div>
+      </td>
+
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
 </div>
+
+<!-- datalist categorías -->
+<datalist id="cat-list">
+  {% for c in categorias %}<option value="{{ c }}">{% endfor %}
+</datalist>
+
 {% else %}
-<div class="prod-grid">
-  <div class="sin">
-    <p style="font-size:2rem;margin-bottom:.5rem">📦</p>
-    <p>No hay productos en el catálogo. <a href="/admin/catalogo/importar-syma">Importa desde SYMA</a>.</p>
-  </div>
+<div class="card" style="text-align:center;padding:4rem;color:#9ca3af">
+  <p style="font-size:2rem;margin-bottom:.5rem">📦</p>
+  <p>No hay productos en el catálogo. <a href="/admin/catalogo/importar-syma">Importa desde SYMA</a>.</p>
 </div>
 {% endif %}
 
 <script>
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function dot(id, estado) {
+  const el = document.getElementById(`dot-${id}`);
+  if (!el) return;
+  el.className = 'saving-dot ' + estado;
+  if (estado === 'saved') setTimeout(() => el.className = 'saving-dot', 2000);
+}
+
+function enterBlur(e, el) {
+  if (e.key === 'Enter') { e.preventDefault(); el.blur(); }
+  if (e.key === 'Escape') { el.blur(); }
+}
+
+// ── Leer toda la fila actual ──────────────────────────────────────────────────
+function leerFila(id) {
+  const row = document.getElementById(`row-${id}`);
+  const get = (field) => {
+    const el = row.querySelector(`[data-field="${field}"]`);
+    if (!el) return null;
+    if (el.type === 'checkbox') return el.checked;
+    if (el.type === 'number')   return parseFloat(el.value) || 0;
+    return el.value;
+  };
+  return {
+    nombre:    get('nombre'),
+    categoria: get('categoria'),
+    precio_ref: get('precio_ref'),
+    orden:     get('orden'),
+    activo:    get('activo'),
+    destacado: get('destacado'),
+    en_hero:   get('en_hero'),
+  };
+}
+
+// ── Guardar campo al salir (blur) ─────────────────────────────────────────────
+async function guardarCampo(el) {
+  const id = el.dataset.id;
+  dot(id, 'saving');
+  try {
+    const data = leerFila(id);
+    const r = await fetch(`/admin/catalogo/${id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    dot(id, r.ok ? 'saved' : 'error');
+  } catch { dot(id, 'error'); }
+}
+
+// ── Guardar toggle inmediatamente ─────────────────────────────────────────────
+async function guardarToggle(el) {
+  const id = el.dataset.id;
+  dot(id, 'saving');
+  try {
+    const data = leerFila(id);
+    const r = await fetch(`/admin/catalogo/${id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    dot(id, r.ok ? 'saved' : 'error');
+  } catch { dot(id, 'error'); }
+}
+
+// ── Eliminar ──────────────────────────────────────────────────────────────────
 async function eliminarProducto(id, nombre) {
   if (!confirm(`¿Eliminar "${nombre}" del catálogo?`)) return;
-  const r = await fetch(`/admin/catalogo/${id}`, { method:'DELETE' });
-  if (r.ok) location.reload();
+  const r = await fetch(`/admin/catalogo/${id}`, { method: 'DELETE' });
+  if (r.ok) document.getElementById(`row-${id}`).remove();
 }
 </script>
 {% endblock %}

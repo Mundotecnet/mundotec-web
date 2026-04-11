@@ -17,7 +17,13 @@ def get_catalogo(activo=None, destacado=None, busqueda="", categoria="") -> list
     if categoria:
         filtros.append("categoria ILIKE %s"); params.append(f"%{categoria}%")
     where = ("WHERE " + " AND ".join(filtros)) if filtros else ""
-    return query(f"SELECT * FROM catalogo_productos {where} ORDER BY orden, nombre", params)
+    return query(f"""
+        SELECT p.*, i.url_path AS imagen_principal
+        FROM catalogo_productos p
+        LEFT JOIN catalogo_imagenes i ON i.producto_id=p.id AND i.es_principal=TRUE
+        {where}
+        ORDER BY p.orden, p.nombre
+    """, params)
 
 
 def get_producto(prod_id: int) -> dict:
