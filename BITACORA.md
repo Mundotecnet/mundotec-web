@@ -135,8 +135,9 @@ WantedBy=multi-user.target
 | Archivo | Contenido |
 |---------|-----------|
 | `mundotec_db_FECHA.sql.gz` | Base de datos PostgreSQL completa |
-| `mundotec_code_FECHA.tar.gz` | Código fuente (sin venv, sin uploads) |
+| `mundotec_git_FECHA.bundle` | Historial git completo (todos los commits) |
 | `mundotec_uploads_FECHA.tar.gz` | Imágenes y archivos subidos |
+| `mundotec-web.git/` | Bare repo local — remoto `backup` permanente |
 
 ### Cron (automático cada noche a las 2:00 AM)
 ```
@@ -159,10 +160,18 @@ gunzip -c /home/lroot/backups/mundotec_db_FECHA.sql.gz | \
   PGPASSWORD=Mw@Web2026! psql -h localhost -U mw_user mundotec_web
 ```
 
-### Restaurar código
+### Restaurar código desde bundle git
 ```bash
-cd /home/lroot
-tar -xzf /home/lroot/backups/mundotec_code_FECHA.tar.gz
+# Opción 1: Clonar desde el bare repo local
+git clone /home/lroot/backups/mundotec-web.git mundotec-web-restaurado
+
+# Opción 2: Restaurar desde bundle diario
+git clone /home/lroot/backups/mundotec_git_FECHA.bundle mundotec-web-restaurado
+```
+
+### Ver historial de versiones del bare repo
+```bash
+git --git-dir=/home/lroot/backups/mundotec-web.git log --oneline
 ```
 
 ### Restaurar imágenes
