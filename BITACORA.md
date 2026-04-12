@@ -122,14 +122,53 @@ WantedBy=multi-user.target
 
 ---
 
-## BACKUP POSTGRESQL
+## SISTEMA DE RESPALDO AUTOMÁTICO
 
+### Ubicación
+| Elemento | Ruta |
+|----------|------|
+| Script | `/home/lroot/scripts/backup_mundotec.sh` |
+| Destino | `/home/lroot/backups/` |
+| Log | `/home/lroot/backups/backup.log` |
+
+### Archivos generados por respaldo
+| Archivo | Contenido |
+|---------|-----------|
+| `mundotec_db_FECHA.sql.gz` | Base de datos PostgreSQL completa |
+| `mundotec_code_FECHA.tar.gz` | Código fuente (sin venv, sin uploads) |
+| `mundotec_uploads_FECHA.tar.gz` | Imágenes y archivos subidos |
+
+### Cron (automático cada noche a las 2:00 AM)
+```
+0 2 * * * /home/lroot/scripts/backup_mundotec.sh >> /home/lroot/backups/backup.log 2>&1
+```
+
+### Retención
+- Se conservan los últimos **14 días** de respaldos
+- Los más antiguos se eliminan automáticamente
+
+### Ejecutar respaldo manual
 ```bash
-# Backup manual de la BD
-pg_dump -U mw_user -h localhost mundotec_web > backup_web_$(date +%Y%m%d).sql
+bash /home/lroot/scripts/backup_mundotec.sh
+```
 
-# Restaurar
-psql -U mw_user -h localhost mundotec_web < backup_web_FECHA.sql
+### Restaurar base de datos
+```bash
+# Descomprimir y restaurar
+gunzip -c /home/lroot/backups/mundotec_db_FECHA.sql.gz | \
+  PGPASSWORD=Mw@Web2026! psql -h localhost -U mw_user mundotec_web
+```
+
+### Restaurar código
+```bash
+cd /home/lroot
+tar -xzf /home/lroot/backups/mundotec_code_FECHA.tar.gz
+```
+
+### Restaurar imágenes
+```bash
+cd /home/lroot/mundotec-web/static
+tar -xzf /home/lroot/backups/mundotec_uploads_FECHA.tar.gz
 ```
 
 ---
@@ -199,6 +238,7 @@ server {
 | 2026-04-08 | Git inicial | v1.0.0 — Primera versión funcional |
 | 2026-04-11 | Git | Sesiones 4 y 5 — PDF, pedidos, correcciones cotizaciones |
 | 2026-04-12 | Git | Sesiones 6 y 7 — Catálogo inline, imágenes, IA descripciones, ofertas, volumen |
+| 2026-04-12 | Backup | Primer respaldo automático — BD + código + imágenes (104 MB) |
 
 ---
 
