@@ -148,6 +148,16 @@ WantedBy=multi-user.target
 - Se conservan los últimos **14 días** de respaldos
 - Los más antiguos se eliminan automáticamente
 
+### Disco externo
+| Campo | Valor |
+|-------|-------|
+| Punto de montaje | `/mnt/backup-ext` |
+| Carpeta respaldos | `/mnt/backup-ext/MUNDOTEC/backups-servidor/` |
+| UUID | `1CFE7C05FE7BD60C` (NTFS, 932 GB) |
+| fstab | `nofail` — si no está conectado el servidor arranca igual |
+
+> Si el disco externo está montado, los scripts copian automáticamente al final. Si no está, solo guardan localmente y registran un aviso en el log.
+
 ### Ejecutar respaldo manual
 ```bash
 bash /home/lroot/scripts/backup_mundotec.sh
