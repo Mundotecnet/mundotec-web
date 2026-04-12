@@ -247,11 +247,46 @@ server {
 | 2026-04-08 | Git inicial | v1.0.0 — Primera versión funcional |
 | 2026-04-11 | Git | Sesiones 4 y 5 — PDF, pedidos, correcciones cotizaciones |
 | 2026-04-12 | Git | Sesiones 6 y 7 — Catálogo inline, imágenes, IA descripciones, ofertas, volumen |
-| 2026-04-12 | Backup | Primer respaldo automático — BD + código + imágenes (104 MB) |
+| 2026-04-12 | Backup | Primer respaldo automático — BD + código + imágenes + historial git (104 MB) |
+| 2026-04-12 | Git | Sesión 8 — Sistema de respaldo automático completo documentado |
 
 ---
 
 ## BITÁCORA DE CAMBIOS
+
+### [SESIÓN 8] — 2026-04-12 — Sistema de respaldo automático con historial Git completo
+
+| # | Tipo | Descripción |
+|---|------|-------------|
+| 1 | Nuevo | Script `/home/lroot/scripts/backup_mundotec.sh` — respaldo automático nocturno |
+| 2 | Nuevo | Bare repo git local `/home/lroot/backups/mundotec-web.git` — remoto permanente `backup` |
+| 3 | Nuevo | Bundle diario `mundotec_git_FECHA.bundle` — snapshot portátil del historial completo |
+| 4 | Nuevo | Respaldo BD `mundotec_db_FECHA.sql.gz` — pg_dump comprimido |
+| 5 | Nuevo | Respaldo imágenes `mundotec_uploads_FECHA.tar.gz` — carpeta static/uploads |
+| 6 | Nuevo | Cron 02:00 AM diario: `0 2 * * * /home/lroot/scripts/backup_mundotec.sh` |
+| 7 | Nuevo | Log en `/home/lroot/backups/backup.log` con timestamps y tamaños |
+| 8 | Infra | Retención automática de 14 días — `find -mtime +14 -delete` por tipo de archivo |
+| 9 | Fix | Historial git inicialmente excluido del respaldo → corregido: se incluye vía bare repo + bundle |
+| 10 | Infra | Remoto `backup` configurado automáticamente con `git remote add/set-url` en cada ejecución |
+
+**Descripción del flujo de respaldo:**
+1. `git push backup main` → sincroniza historial al bare repo local
+2. `git bundle create --all` → genera snapshot portátil del día
+3. `pg_dump | gzip` → exporta BD PostgreSQL completa
+4. `tar -czf static/uploads` → archiva imágenes y archivos subidos
+5. `find -mtime +14 -delete` → limpia respaldos más antiguos de 14 días
+
+**Restauración de emergencia:**
+```bash
+# Código
+git clone /home/lroot/backups/mundotec-web.git mundotec-web-nuevo
+# Base de datos
+gunzip -c /home/lroot/backups/mundotec_db_FECHA.sql.gz | PGPASSWORD=Mw@Web2026! psql -h localhost -U mw_user mundotec_web
+# Imágenes
+tar -xzf /home/lroot/backups/mundotec_uploads_FECHA.tar.gz -C /home/lroot/mundotec-web/static/
+```
+
+---
 
 ### [SESIÓN 7] — 2026-04-12 — Módulo de Ofertas y Descuentos por volumen (Fase 1 y 2)
 
