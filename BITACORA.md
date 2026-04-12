@@ -4,7 +4,7 @@
 **Servidor:** Ubuntu 192.168.88.250:8001
 **Ruta local:** `/Users/lroot/Downloads/mundotec-web`
 **Ruta servidor:** `/home/lroot/mundotec-web`
-**Última actualización:** 2026-04-11
+**Última actualización:** 2026-04-12
 
 ---
 
@@ -51,7 +51,10 @@
     ├── main.py          FastAPI app
     ├── db.py            Conexión PostgreSQL + DDL
     ├── config.py        Configuración (puertos, credenciales)
-    ├── admin/           Módulos de gestión (catálogo, proyectos, config)
+    ├── admin/
+    │   ├── catalogo.py       CRUD catálogo + importación SYMA
+    │   ├── generar_desc.py   Generador IA descripciones (Claude + local)
+    │   └── importar_imagenes.py  Importación desde carpeta auto-import
     ├── public/          Módulos del sitio público
     ├── templates/
     │   ├── public/      Plantillas sitio web
@@ -71,6 +74,10 @@
 | `catalogo_specs` | Especificaciones técnicas por producto (clave-valor) |
 | `proyectos` | Proyectos/obras de la empresa (con imagen y descripción) |
 | `contacto` | Mensajes recibidos del formulario de contacto |
+| `cotizaciones` | Cotizaciones generadas desde el carrito (items JSON) |
+| `pedidos` | Pedidos con estados y link de pago |
+| `ofertas` | Ofertas por tiempo con precio especial, badge y fechas |
+| `descuentos_volumen` | Escalones de descuento por cantidad por producto |
 
 ---
 
@@ -172,11 +179,16 @@ server {
 
 ## GOTCHAS / ADVERTENCIAS
 
-1. **Importar de SYMA**: Requiere que pyodbc y ODBC Driver 17 estén instalados en el venv. Si falla, el endpoint devuelve `[{"error": "..."}]`.
-2. **Imágenes**: Se guardan en `static/uploads/`. No están en git (`.gitignore`). Hacer backup manual de esa carpeta.
-3. **Config del sitio**: Se guarda en la tabla `site_config` de PostgreSQL. Editable desde `/admin/configuracion`.
-4. **Colores**: Se aplican como variables CSS en `templates/public/base.html`. Requieren recarga del navegador tras cambiar.
-5. **Admin password**: Está hardcodeada en `main.py` → `ADMIN_PASS`. Cambiar antes de ir a producción.
+1. **Importar de SYMA**: Requiere pyodbc + ODBC Driver 17 en el venv. Si falla devuelve `[{"error": "..."}]`.
+2. **Imágenes**: Se guardan en `static/uploads/`. No están en git (`.gitignore`). Hacer backup manual.
+3. **Config del sitio**: Tabla `site_config` en PostgreSQL. Editable desde `/admin/configuracion`.
+4. **Colores CSS**: Variables en `templates/public/base.html`. Requieren recarga del navegador.
+5. **Admin password**: Hardcodeada en `main.py → ADMIN_PASS`. Cambiar antes de producción.
+6. **Anthropic API Key**: Guardada en `/etc/systemd/system/mundotec-web.service.d/env.conf`. No en código.
+7. **Ofertas únicas**: `UNIQUE INDEX` impide 2 ofertas activas para el mismo producto simultáneamente.
+8. **Carrito y volumen**: El descuento por volumen se aplica en tiempo real vía `/api/precio-volumen/{id}/{qty}`. El precio guardado en localStorage es el precio base; el descuento se recalcula al abrir el carrito.
+9. **Samba share**: Imágenes auto-import en `\\192.168.88.250\imagenes-mundotec` (usuario: `lroot`, pass: `Mundotec2026`).
+10. **Specs al aprobar IA**: Se parsea "Etiqueta: Valor" → si no hay ":", etiqueta = "Especificación".
 
 ---
 
@@ -186,10 +198,58 @@ server {
 |-------|------|-------------|
 | 2026-04-08 | Git inicial | v1.0.0 — Primera versión funcional |
 | 2026-04-11 | Git | Sesiones 4 y 5 — PDF, pedidos, correcciones cotizaciones |
+| 2026-04-12 | Git | Sesiones 6 y 7 — Catálogo inline, imágenes, IA descripciones, ofertas, volumen |
 
 ---
 
 ## BITÁCORA DE CAMBIOS
+
+### [SESIÓN 7] — 2026-04-12 — Módulo de Ofertas y Descuentos por volumen (Fase 1 y 2)
+
+| # | Tipo | Descripción |
+|---|------|-------------|
+| 1 | Nuevo | Tabla `ofertas` — precio especial por tiempo con badge, etiqueta y fechas |
+| 2 | Nuevo | Tabla `descuentos_volumen` — escalones de descuento por cantidad por producto |
+| 3 | Nuevo | Admin `/admin/ofertas` — CRUD de ofertas con modal, cálculo automático de % descuento |
+| 4 | Nuevo | Admin `/admin/descuentos-volumen` — escalones agrupados por producto, vista previa en tiempo real |
+| 5 | Nuevo | Página pública `/ofertas` — grid de ofertas vigentes con countdown en tiempo real |
+| 6 | Nuevo | API `/api/precio-volumen/{id}/{cantidad}` — descuento aplicable según cantidad |
+| 7 | Mejora | Catálogo público: badge rojo de oferta + precio tachado en tarjetas |
+| 8 | Mejora | Ficha producto: bloque de oferta con countdown, tabla de precios por volumen |
+| 9 | Mejora | Carrito: aplica descuento de volumen automáticamente al cambiar cantidad |
+| 10 | Mejora | Nav pública: enlace "🏷️ Ofertas" en rojo |
+| 11 | Mejora | Sidebar admin: enlaces "🏷️ Ofertas" y "📦 Desc. por volumen" |
+| 12 | Mejora | JOIN de ofertas en `get_catalogo_publico()` y `get_producto_publico()` — campo `precio_efectivo` |
+
+---
+
+### [SESIÓN 6] — 2026-04-12 — Catálogo admin, IA descripciones, imágenes, correcciones
+
+| # | Tipo | Descripción |
+|---|------|-------------|
+| 1 | Nuevo | Admin catálogo rediseñado como tabla inline-editable (nombre, categoría select, precio, orden, toggles) |
+| 2 | Nuevo | Categoría en catálogo: `<select>` con categorías existentes + opción "✏️ Escribir nueva…" |
+| 3 | Nuevo | Utilitario importación imágenes — carpeta auto-import sincronizada con productos por código |
+| 4 | Nuevo | Samba share `\\192.168.88.250\imagenes-mundotec` para subir imágenes desde Windows |
+| 5 | Nuevo | Módulo IA `/admin/generar-desc` — generación y aprobación de descripciones con Claude |
+| 6 | Nuevo | Generador local (sin API key) con detección de tipo, marca, modelo, color, specs |
+| 7 | Nuevo | Generador Claude (con API key) — `claude-haiku-4-5` — formato "Etiqueta: Valor" en características |
+| 8 | Nuevo | API Key Anthropic configurada en systemd override `/etc/systemd/system/mundotec-web.service.d/env.conf` |
+| 9 | Mejora | Selección múltiple con checkboxes en generador IA — barra flotante "Re-generar / Aprobar seleccionados" |
+| 10 | Mejora | Endpoint `/aprobar` parsea "Etiqueta: Valor" → guarda etiqueta y valor por separado en `catalogo_specs` |
+| 11 | Mejora | Specs de telescopio: detección de apertura y focal desde nombre (ej: 114x500mm) |
+| 12 | Mejora | Carrusel homepage con autoplay 3 seg, pausa en hover, flechas circulares |
+| 13 | Mejora | `object-fit:contain` + `aspect-ratio:3/2` en catálogo y ficha de producto |
+| 14 | Mejora | `overflow:hidden` en wrapper de imagen principal para respetar `border-radius` |
+| 15 | Fix | `[:120]` en template Jinja2 → reemplazado por `\|truncate(120,true,'')` |
+| 16 | Fix | Botones "Generar" deshabilitados sin API key — corregido para usar generador local |
+| 17 | Fix | Etiquetas "Característica 1/2/3" en specs → migradas a etiquetas reales con SQL UPDATE |
+| 18 | Fix | Modelo Claude `claude-3-5-haiku-20241022` deprecado → actualizado a `claude-haiku-4-5` |
+| 19 | Fix | Regex `\b360\b` para no confundir modelo "L4360" con "Rotación 360 grados" |
+| 20 | Infra | `_normalize()` en db.py convierte `date`/`datetime` a ISO string para serialización JSON |
+| 21 | Infra | Filtro Jinja2 `fmtdt` para formatear fechas desde strings ISO en templates |
+
+---
 
 ### [SESIÓN 5] — 2026-04-11 — Correcciones cotizaciones
 
