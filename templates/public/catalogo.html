@@ -91,7 +91,16 @@
       {% endif %}
     </div>
     <div class="prod-body">
-      {% if p.categoria %}<div class="prod-cat">{{ p.categoria }}</div>{% endif %}
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.3rem">
+        {% if p.categoria %}<div class="prod-cat">{{ p.categoria }}</div>{% else %}<div></div>{% endif %}
+        {% if p.stock is not none %}
+          {% if p.stock > 0 %}
+            <span style="font-size:.7rem;font-weight:700;background:#dcfce7;color:#15803d;padding:2px 8px;border-radius:20px">✔ Disponible</span>
+          {% else %}
+            <span style="font-size:.7rem;font-weight:700;background:#fee2e2;color:#dc2626;padding:2px 8px;border-radius:20px">Agotado</span>
+          {% endif %}
+        {% endif %}
+      </div>
       <div class="prod-name">{{ p.nombre }}</div>
       {% if p.descripcion_web %}
         <div class="prod-desc">{{ p.descripcion_web[:100] }}{% if p.descripcion_web|length > 100 %}…{% endif %}</div>

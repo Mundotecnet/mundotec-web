@@ -95,6 +95,7 @@ CREATE TABLE IF NOT EXISTS cotizaciones (
 );
 
 ALTER TABLE contacto ADD COLUMN IF NOT EXISTS producto_ref VARCHAR(300);
+ALTER TABLE catalogo_productos ADD COLUMN IF NOT EXISTS stock INT DEFAULT 0;
 
 CREATE TABLE IF NOT EXISTS pedidos (
     id              SERIAL PRIMARY KEY,

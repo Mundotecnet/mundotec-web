@@ -49,11 +49,12 @@ def crear_producto(codigo, nombre, descripcion_syma="", descripcion_web="",
 def actualizar_producto(prod_id: int, data: dict):
     campos = ["nombre=%s","descripcion_web=%s","categoria=%s",
               "activo=%s","destacado=%s","en_hero=%s","orden=%s","precio_ref=%s",
-              "actualizado_en=NOW()"]
+              "stock=%s","actualizado_en=NOW()"]
     params = [data.get("nombre"), data.get("descripcion_web",""),
               data.get("categoria",""), data.get("activo", True),
               data.get("destacado", False), data.get("en_hero", False),
-              data.get("orden", 0), data.get("precio_ref"), prod_id]
+              data.get("orden", 0),
+              data.get("precio_ref"), int(data.get("stock") or 0), prod_id]
     execute(f"UPDATE catalogo_productos SET {','.join(campos)} WHERE id=%s", params)
 
 

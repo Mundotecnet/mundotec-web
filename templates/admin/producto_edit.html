@@ -50,6 +50,7 @@
         </datalist>
       </div>
       <div class="fi"><label>Precio referencia (₡, opcional)</label><input type="number" id="f-precio" value="{{ p.precio_ref or '' }}" min="0" step="1"></div>
+      <div class="fi"><label>Stock (unidades disponibles)</label><input type="number" id="f-stock" value="{{ p.stock or 0 }}" min="0" step="1"></div>
       <div style="display:flex;gap:1.5rem;margin-bottom:1rem;align-items:center">
         <label style="display:flex;align-items:center;gap:.5rem;font-size:.88rem;font-weight:600;cursor:pointer">
           <label class="toggle"><input type="checkbox" id="f-activo" {{ 'checked' if p.activo }}><span class="slider"></span></label>
@@ -167,6 +168,7 @@ async function guardarInfo() {
     descripcion_web: document.getElementById('f-desc').value,
     categoria:       document.getElementById('f-categoria').value,
     precio_ref:      parseFloat(document.getElementById('f-precio').value) || null,
+    stock:           parseInt(document.getElementById('f-stock').value) || 0,
     activo:          document.getElementById('f-activo').checked,
     destacado:       document.getElementById('f-destacado').checked,
     en_hero:         document.getElementById('f-en-hero').checked,
