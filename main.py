@@ -19,6 +19,7 @@ from admin.proyectos   import (get_proyectos, get_proyecto, crear_proyecto,
                                 eliminar_proyecto, get_categorias_proyectos)
 from admin.importar_imagenes import listar_pendientes, ejecutar_importacion
 from admin.generar_desc import generar_descripcion, get_productos_sin_descripcion
+from admin.actualizar_precios import comparar_precios, aplicar_precios
 from admin.config_site import (get_config, set_config_bulk, get_contactos,
                                 marcar_leido, get_stats_contacto)
 from public.catalogo_pub import (get_catalogo_publico, get_producto_publico,
@@ -599,6 +600,31 @@ async def admin_importar_imagenes_post(request: Request):
     forzar = data.get("forzar", False)
     result = ejecutar_importacion(forzar=forzar)
     return JSONResponse(result)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ADMIN — Actualizar precios desde SYMA
+# ─────────────────────────────────────────────────────────────────────────────
+@app.get("/admin/precios", response_class=HTMLResponse)
+async def admin_precios_get(request: Request):
+    _require_admin(request)
+    resultado = comparar_precios()
+    if resultado and "error" in resultado[0]:
+        return templates.TemplateResponse("admin/actualizar_precios.html", {
+            "request": request, "error": resultado[0]["error"], "cambios": []
+        })
+    return templates.TemplateResponse("admin/actualizar_precios.html", {
+        "request": request, "cambios": resultado, "error": None
+    })
+
+@app.post("/admin/precios/aplicar")
+async def admin_precios_post(request: Request):
+    _require_admin(request)
+    data = await request.json()
+    try:
+        n = aplicar_precios(data.get("cambios", []))
+        return JSONResponse({"actualizados": n})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ADMIN — Configuración del sitio

@@ -1,0 +1,146 @@
+{% extends "admin/base.html" %}
+{% block title %}Actualizar Precios{% endblock %}
+{% block topbar_title %}💰 Actualizar Precios desde SYMA{% endblock %}
+{% block topbar_actions %}
+  <a href="/admin/catalogo" class="btn btn-ghost btn-sm">← Volver al catálogo</a>
+{% endblock %}
+{% block head %}
+<style>
+.info-banner {
+  background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px;
+  padding:.9rem 1.2rem; margin-bottom:1.2rem;
+  display:flex; align-items:center; gap:.8rem; font-size:.88rem; color:#1e40af;
+}
+.sel-bar {
+  background:#fff; border:1px solid #d1d5db; border-radius:10px;
+  padding:.9rem 1.5rem; margin-bottom:1.2rem;
+  display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;
+}
+.count-badge { background:#1E4E8C; color:#fff; border-radius:20px; padding:3px 12px; font-size:.8rem; font-weight:700; }
+.res-table { width:100%; border-collapse:collapse; font-size:.86rem; }
+.res-table th { background:#f3f4f6; padding:9px 12px; text-align:left; font-size:.76rem; font-weight:700; color:#6b7280; text-transform:uppercase; }
+.res-table td { padding:9px 12px; border-bottom:1px solid #f0f0f0; vertical-align:middle; }
+.res-table tr:hover td { background:#fafafa; }
+.check-col { width:40px; text-align:center; }
+.precio-col { text-align:right; font-variant-numeric:tabular-nums; }
+.dif-pos { color:#dc2626; font-weight:700; }
+.dif-neg { color:#15803d; font-weight:700; }
+.spinner { display:none; }
+</style>
+{% endblock %}
+{% block content %}
+
+{% if error %}
+  <div class="alert alert-error">⚠ Error al conectar con SYMA: {{ error }}</div>
+{% elif not cambios %}
+  <div class="card" style="text-align:center;padding:4rem;color:#9ca3af">
+    <p style="font-size:2.5rem;margin-bottom:.5rem">✅</p>
+    <p style="font-size:1rem;font-weight:600;color:#374151">Todos los precios están al día</p>
+    <p style="font-size:.85rem;margin-top:.5rem">No se encontraron diferencias entre el catálogo web y SYMA.</p>
+  </div>
+{% else %}
+
+<div class="info-banner">
+  ℹ️ <span>Se encontraron <strong>{{ cambios|length }}</strong> producto(s) con precio diferente en SYMA. Seleccione los que desea actualizar y confirme.</span>
+</div>
+
+<div class="sel-bar">
+  <div style="display:flex;align-items:center;gap:.8rem">
+    <span class="count-badge" id="sel-count">0 seleccionados</span>
+    <span style="font-size:.85rem;color:#6b7280">Marque los productos a actualizar.</span>
+  </div>
+  <button onclick="aplicarSeleccionados()" class="btn btn-accent" id="btn-aplicar" disabled>
+    ✔ Aplicar seleccionados
+  </button>
+</div>
+
+<div class="card" style="padding:0;overflow:hidden">
+  <table class="res-table">
+    <thead>
+      <tr>
+        <th class="check-col">
+          <input type="checkbox" id="chkAll" onchange="toggleAll(this)">
+        </th>
+        <th>Código</th>
+        <th>Producto</th>
+        <th class="precio-col">Precio web actual</th>
+        <th class="precio-col">Precio SYMA</th>
+        <th class="precio-col">Diferencia</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in cambios %}
+      <tr data-id="{{ c.id }}" data-precio="{{ c.precio_syma }}">
+        <td class="check-col">
+          <input type="checkbox" class="chk-prod" onchange="actualizarContador()">
+        </td>
+        <td style="font-family:monospace;font-size:.82rem;font-weight:600">{{ c.codigo }}</td>
+        <td style="max-width:280px">{{ c.nombre }}</td>
+        <td class="precio-col">
+          {% if c.precio_web > 0 %}₡{{ "{:,.0f}".format(c.precio_web) }}{% else %}<span style="color:#9ca3af">—</span>{% endif %}
+        </td>
+        <td class="precio-col" style="font-weight:600">₡{{ "{:,.0f}".format(c.precio_syma) }}</td>
+        <td class="precio-col">
+          {% if c.diferencia > 0 %}
+            <span class="dif-pos">+₡{{ "{:,.0f}".format(c.diferencia) }}</span>
+          {% else %}
+            <span class="dif-neg">-₡{{ "{:,.0f}".format(c.diferencia | abs) }}</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div id="result-msg" style="display:none;margin-top:1rem"></div>
+
+{% endif %}
+
+<script>
+function toggleAll(chk) {
+  document.querySelectorAll('.chk-prod').forEach(c => c.checked = chk.checked);
+  actualizarContador();
+}
+
+function actualizarContador() {
+  const n = document.querySelectorAll('.chk-prod:checked').length;
+  document.getElementById('sel-count').textContent = n + ' seleccionado' + (n !== 1 ? 's' : '');
+  document.getElementById('btn-aplicar').disabled = n === 0;
+}
+
+async function aplicarSeleccionados() {
+  const sel = [...document.querySelectorAll('.chk-prod:checked')].map(c => {
+    const tr = c.closest('tr');
+    return { id: parseInt(tr.dataset.id), precio_syma: parseFloat(tr.dataset.precio) };
+  });
+
+  if (!sel.length) return;
+
+  const btn = document.getElementById('btn-aplicar');
+  btn.textContent = '⏳ Aplicando...';
+  btn.disabled = true;
+
+  const r   = await fetch('/admin/precios/aplicar', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ cambios: sel })
+  });
+  const res = await r.json();
+
+  const msg = document.getElementById('result-msg');
+  if (res.actualizados !== undefined) {
+    msg.className = 'alert alert-success';
+    msg.innerHTML = `✅ <strong>${res.actualizados}</strong> precio(s) actualizados correctamente. Redirigiendo...`;
+    msg.style.display = 'block';
+    setTimeout(() => { window.location.href = '/admin/precios'; }, 1800);
+  } else {
+    msg.className = 'alert alert-error';
+    msg.innerHTML = `⚠ Error: ${res.error || 'No se pudo aplicar'}`;
+    msg.style.display = 'block';
+    btn.textContent = '✔ Aplicar seleccionados';
+    btn.disabled = false;
+  }
+}
+</script>
+{% endblock %}
