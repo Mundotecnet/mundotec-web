@@ -262,10 +262,24 @@ server {
 | 2026-04-12 | Backup | Primer respaldo automático — BD + código + imágenes + historial git (104 MB) |
 | 2026-04-12 | Git | Sesión 8 — Sistema de respaldo automático completo documentado |
 | 2026-04-13 | Git | Sesión 9 — Respaldo SQL Server, disco externo, PDFs de referencia |
+| 2026-04-13 | Git | Sesión 10 — Módulo actualizar precios desde SYMA; sincronización Mac↔servidor |
 
 ---
 
 ## BITÁCORA DE CAMBIOS
+
+### [SESIÓN 10] — 2026-04-13 — Módulo actualizar precios + sincronización git
+
+| # | Tipo | Descripción |
+|---|------|-------------|
+| 1 | Nuevo | `admin/actualizar_precios.py` — `comparar_precios()` y `aplicar_precios()` |
+| 2 | Nuevo | `GET /admin/precios` — tabla de diferencias web vs SYMA con checkboxes |
+| 3 | Nuevo | `POST /admin/precios/aplicar` — aplica solo los precios seleccionados |
+| 4 | Nuevo | Sidebar: enlace "💰 Actualizar precios" bajo Utilidades |
+| 5 | Fix | Conflicto de sincronización Mac↔servidor resuelto con stash + rebase |
+| 6 | Sync | Cambios del servidor (ofertas, descuentos por volumen) traídos al Mac |
+
+---
 
 ### [SESIÓN 9] — 2026-04-13 — Respaldo SQL Server + Disco externo + PDFs de referencia
 
