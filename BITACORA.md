@@ -4,7 +4,7 @@
 **Servidor:** Ubuntu 192.168.88.250:8001
 **Ruta local:** `/Users/lroot/Downloads/mundotec-web`
 **Ruta servidor:** `/home/lroot/mundotec-web`
-**Última actualización:** 2026-04-12
+**Última actualización:** 2026-04-13
 
 ---
 
@@ -134,10 +134,12 @@ WantedBy=multi-user.target
 ### Archivos generados por respaldo
 | Archivo | Contenido |
 |---------|-----------|
-| `mundotec_db_FECHA.sql.gz` | Base de datos PostgreSQL completa |
 | `mundotec_git_FECHA.bundle` | Historial git completo (todos los commits) |
+| `mundotec_db_FECHA.sql.gz` | Base de datos PostgreSQL completa |
 | `mundotec_uploads_FECHA.tar.gz` | Imágenes y archivos subidos |
 | `mundotec-web.git/` | Bare repo local — remoto `backup` permanente |
+| `sqlserver/Syma_FECHA.bak.gz` | BD SQL Server 2019 Syma (una vez por día, lock de fecha) |
+| `sqlserver/MundoTecAdminDb_*.bak.gz` | BD SQL Server 2012 — respaldo único, retención permanente |
 
 ### Cron (automático cada noche a las 2:00 AM)
 ```
@@ -259,10 +261,39 @@ server {
 | 2026-04-12 | Git | Sesiones 6 y 7 — Catálogo inline, imágenes, IA descripciones, ofertas, volumen |
 | 2026-04-12 | Backup | Primer respaldo automático — BD + código + imágenes + historial git (104 MB) |
 | 2026-04-12 | Git | Sesión 8 — Sistema de respaldo automático completo documentado |
+| 2026-04-13 | Git | Sesión 9 — Respaldo SQL Server, disco externo, PDFs de referencia |
 
 ---
 
 ## BITÁCORA DE CAMBIOS
+
+### [SESIÓN 9] — 2026-04-13 — Respaldo SQL Server + Disco externo + PDFs de referencia
+
+| # | Tipo | Descripción |
+|---|------|-------------|
+| 1 | Nuevo | Share Samba `\\192.168.88.250\sql-backups` → `/home/lroot/backups/sqlserver/` — SQL Server escribe .bak directamente aquí |
+| 2 | Nuevo | Script `/home/lroot/scripts/backup_sqlserver.py` — dispara `BACKUP DATABASE` via pyodbc + comprime con gzip |
+| 3 | Nuevo | Respaldo `Syma_FECHA.bak.gz` integrado al cron — corre desde `backup_mundotec.sh` con lock de fecha |
+| 4 | Nuevo | Respaldo único `MundoTecAdminDb_20260412.bak.gz` (59 MB) — SQL Server 2012 en `192.168.10.15:1433` |
+| 5 | Nuevo | Disco externo NTFS 932 GB montado en `/mnt/backup-ext` — UUID `1CFE7C05FE7BD60C` |
+| 6 | Nuevo | fstab con `nofail` — servidor arranca sin problemas aunque el disco no esté conectado |
+| 7 | Nuevo | Ambos scripts de backup copian automáticamente al disco externo si está montado |
+| 8 | Nuevo | PDF `/home/lroot/backups/Resumen_Sistema_Respaldo_MUNDOTEC.pdf` — referencia completa del sistema de respaldo |
+| 9 | Nuevo | PDF `/home/lroot/backups/Credenciales_Sistema_MUNDOTEC.pdf` — credenciales + estructura de proyectos |
+| 10 | Infra | `pymssql` instalado en venv de reportes-syma — único driver que soporta TLS 1.0 de SQL Server 2012 |
+| 11 | Infra | OpenSSL configurado con `MinProtocol=TLSv1` y `SECLEVEL=1` para compatibilidad con SQL Server 2012 |
+| 12 | Infra | SQL Server detectado via UDP 1434 (SQL Browser) — dos instancias: `SQLEXPRESS` (2019) y `MSSQLSERVER` (2012) |
+
+**Scripts del sistema de respaldo:**
+| Script | Función |
+|--------|---------|
+| `backup_mundotec.sh` | Git + PostgreSQL + Imágenes + SQL Server → Local + Disco externo (02:00 AM) |
+| `backup_reportes.sh` | Git + Static + SQL Server (si no corrió) → Local + Disco externo (02:30 AM) |
+| `backup_sqlserver.py` | `BACKUP DATABASE [Syma]` vía Samba + gzip + limpieza 14 días |
+| `generar_resumen_respaldo.py` | Genera PDF de referencia del sistema de respaldo |
+| `generar_credenciales.py` | Genera PDF de credenciales + estructura de proyectos |
+
+---
 
 ### [SESIÓN 8] — 2026-04-12 — Sistema de respaldo automático con historial Git completo
 
