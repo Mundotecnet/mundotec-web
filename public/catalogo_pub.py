@@ -220,17 +220,18 @@ def marcar_cotizacion_leida(cot_id: int):
 # ─────────────────────────────────────────────────────────────────────────────
 def registrar_pedido(tipo_factura, nombre, email, telefono, cedula,
                      direccion, cod_actividad, nota_cliente,
-                     items, total_sin_iva, total_con_iva, iva_pct=13) -> dict:
+                     items, total_sin_iva, total_con_iva, iva_pct=13,
+                     cliente_id=None) -> dict:
     import json
     row = execute("""
         INSERT INTO pedidos (tipo_factura, nombre, email, telefono, cedula,
                              direccion, cod_actividad, nota_cliente,
-                             items, total_sin_iva, total_con_iva, iva_pct)
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id
+                             items, total_sin_iva, total_con_iva, iva_pct, cliente_id)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id
     """, (tipo_factura, nombre, email or None, telefono or None,
           cedula or None, direccion or None, cod_actividad or None,
           nota_cliente or None, json.dumps(items, ensure_ascii=False),
-          total_sin_iva, total_con_iva, iva_pct),
+          total_sin_iva, total_con_iva, iva_pct, cliente_id),
          returning=True)
     if row:
         num = f"ORD-{row['id']:05d}"

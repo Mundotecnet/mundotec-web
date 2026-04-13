@@ -1,0 +1,54 @@
+{% extends "public/base.html" %}
+{% block title %}Iniciar sesión — MUNDOTEC{% endblock %}
+{% block head %}
+<style>
+.login-wrap {
+  min-height: 70vh; display:flex; align-items:center; justify-content:center;
+  padding: 3rem 1rem;
+  background: linear-gradient(135deg, #0d1b2a 0%, #1E4E8C 100%);
+}
+.login-card {
+  background:#fff; border-radius:20px; padding:2.5rem 2rem;
+  width:100%; max-width:400px; text-align:center;
+  box-shadow: 0 20px 60px rgba(0,0,0,.3);
+}
+.login-logo { font-size:1.6rem; font-weight:800; margin-bottom:.3rem; }
+.login-logo span { color:var(--accent); }
+.login-sub { font-size:.88rem; color:#6b7280; margin-bottom:2rem; }
+.login-info { background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px;
+  padding:.9rem 1rem; font-size:.85rem; color:#1e40af; margin-bottom:1.5rem; text-align:left; }
+.btn-google {
+  display:flex; align-items:center; justify-content:center; gap:.8rem;
+  width:100%; padding:13px 20px;
+  background:#fff; border:2px solid #e5e7eb; border-radius:10px;
+  font-size:.95rem; font-weight:600; color:#374151;
+  cursor:pointer; transition:.2s; text-decoration:none;
+}
+.btn-google:hover { border-color:#1E4E8C; background:#f0f7ff; color:#1E4E8C; }
+.btn-google img { width:22px; height:22px; }
+.divider { display:flex; align-items:center; gap:.8rem; margin:1.2rem 0; color:#9ca3af; font-size:.8rem; }
+.divider::before, .divider::after { content:''; flex:1; border-top:1px solid #e5e7eb; }
+.back-link { display:block; margin-top:1.2rem; font-size:.83rem; color:#9ca3af; }
+.back-link:hover { color:var(--primary); }
+</style>
+{% endblock %}
+{% block content %}
+<div class="login-wrap">
+  <div class="login-card">
+    <div class="login-logo">MUNDO<span>TEC</span></div>
+    <p class="login-sub">Área de clientes</p>
+
+    <div class="login-info">
+      🔒 Para tramitar una compra necesita identificarse.<br>
+      Sus pedidos quedarán vinculados a su cuenta.
+    </div>
+
+    <a href="/auth/google?next={{ next }}" class="btn-google">
+      <img src="https://www.google.com/favicon.ico" alt="Google">
+      Continuar con Google
+    </a>
+
+    <a href="{{ next or '/carrito' }}" class="back-link">← Volver al carrito</a>
+  </div>
+</div>
+{% endblock %}

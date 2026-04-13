@@ -1,0 +1,140 @@
+{% extends "public/base.html" %}
+{% block title %}Mi Cuenta — MUNDOTEC{% endblock %}
+{% block head %}
+<style>
+.cuenta-hero {
+  background:linear-gradient(135deg,var(--dark),var(--primary));
+  padding:2.5rem 5%; color:#fff; display:flex; align-items:center; gap:1.5rem;
+}
+.cuenta-avatar { width:72px; height:72px; border-radius:50%; border:3px solid rgba(255,255,255,.3); object-fit:cover; }
+.cuenta-avatar-placeholder {
+  width:72px; height:72px; border-radius:50%; background:rgba(255,255,255,.15);
+  display:flex; align-items:center; justify-content:center; font-size:2rem;
+}
+.cuenta-info h1 { font-size:1.4rem; font-weight:800; }
+.cuenta-info p { font-size:.88rem; opacity:.75; margin-top:.2rem; }
+.cuenta-layout { max-width:900px; margin:0 auto; padding:2rem 5%; }
+.seccion-titulo { font-size:1rem; font-weight:700; color:var(--dark); margin-bottom:1rem; display:flex; align-items:center; gap:.5rem; }
+.pedido-card {
+  background:#fff; border-radius:12px; box-shadow:0 2px 12px rgba(0,0,0,.07);
+  margin-bottom:1rem; overflow:hidden;
+}
+.pedido-header {
+  padding:1rem 1.2rem; display:flex; justify-content:space-between; align-items:center;
+  cursor:pointer; gap:1rem; flex-wrap:wrap;
+}
+.pedido-header:hover { background:#f9fafb; }
+.pedido-num { font-weight:700; font-size:.95rem; color:var(--primary); }
+.pedido-fecha { font-size:.8rem; color:#9ca3af; }
+.pedido-total { font-weight:700; font-size:.95rem; }
+.pedido-body { padding:1rem 1.2rem; border-top:1px solid #f0f0f0; display:none; }
+.pedido-body.open { display:block; }
+.items-table { width:100%; border-collapse:collapse; font-size:.85rem; margin-bottom:1rem; }
+.items-table th { background:#f3f4f6; padding:7px 10px; text-align:left; font-size:.75rem; color:#6b7280; font-weight:700; text-transform:uppercase; }
+.items-table td { padding:8px 10px; border-bottom:1px solid #f5f5f5; }
+.badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:.72rem; font-weight:600; }
+.badge-pendiente  { background:#fef3c7; color:#92400e; }
+.badge-en_proceso { background:#dbeafe; color:#1d4ed8; }
+.badge-link_enviado { background:#ede9fe; color:#6d28d9; }
+.badge-pagado     { background:#dcfce7; color:#166534; }
+.badge-cancelado  { background:#fee2e2; color:#dc2626; }
+.link-pago-btn {
+  display:inline-flex; align-items:center; gap:.4rem;
+  padding:8px 16px; background:var(--accent); color:#fff;
+  border-radius:8px; font-weight:600; font-size:.85rem; text-decoration:none;
+}
+.link-pago-btn:hover { background:#cf6d17; }
+.empty-state { text-align:center; padding:4rem 2rem; color:#9ca3af; }
+.cerrar-sesion {
+  display:inline-flex; align-items:center; gap:.4rem;
+  padding:6px 14px; border:1.5px solid rgba(255,255,255,.3); border-radius:8px;
+  color:rgba(255,255,255,.8); font-size:.82rem; cursor:pointer; background:none;
+  text-decoration:none; transition:.15s;
+}
+.cerrar-sesion:hover { background:rgba(255,255,255,.1); color:#fff; }
+</style>
+{% endblock %}
+{% block content %}
+
+<!-- Hero -->
+<div class="cuenta-hero">
+  {% if cliente.foto_url %}
+    <img src="{{ cliente.foto_url }}" alt="Foto" class="cuenta-avatar">
+  {% else %}
+    <div class="cuenta-avatar-placeholder">👤</div>
+  {% endif %}
+  <div class="cuenta-info" style="flex:1">
+    <h1>{{ cliente.nombre or cliente.email }}</h1>
+    <p>{{ cliente.email }}</p>
+  </div>
+  <a href="/auth/logout" class="cerrar-sesion">🚪 Cerrar sesión</a>
+</div>
+
+<!-- Contenido -->
+<div class="cuenta-layout">
+
+  <div class="seccion-titulo">🛒 Mis pedidos</div>
+
+  {% if pedidos %}
+    {% for p in pedidos %}
+    <div class="pedido-card">
+      <div class="pedido-header" onclick="togglePedido({{ loop.index }})">
+        <div>
+          <div class="pedido-num">#{{ p.num_pedido }}</div>
+          <div class="pedido-fecha">{{ p.creado_en | fmtdt }}</div>
+        </div>
+        <span class="badge badge-{{ p.estado }}">
+          {{ {'pendiente':'⏳ Pendiente','en_proceso':'🔄 En proceso','link_enviado':'💳 Link enviado','pagado':'✅ Pagado','cancelado':'❌ Cancelado'}.get(p.estado, p.estado) }}
+        </span>
+        <div class="pedido-total">₡{{ "{:,.0f}".format(p.total_con_iva | float) }}</div>
+        <span style="color:#9ca3af;font-size:.8rem">▼</span>
+      </div>
+      <div class="pedido-body" id="ped-{{ loop.index }}">
+        {% set items = p.items | tojson | safe if p.items is string else p.items %}
+        <table class="items-table">
+          <thead><tr><th>Producto</th><th>Cód.</th><th style="text-align:right">Cant.</th><th style="text-align:right">Subtotal</th></tr></thead>
+          <tbody>
+            {% for it in p.items_parsed %}
+            <tr>
+              <td>{{ it.nombre }}</td>
+              <td style="color:#9ca3af;font-size:.8rem">{{ it.codigo }}</td>
+              <td style="text-align:right">{{ it.cantidad }}</td>
+              <td style="text-align:right;font-weight:600">
+                {% if it.precio_ref %}₡{{ "{:,.0f}".format(it.precio_ref * it.cantidad * (1 + p.iva_pct/100)) }}{% else %}—{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem">
+          <div style="font-size:.85rem;color:#6b7280">
+            Tipo: <strong>{{ 'Ticket Electrónico' if p.tipo_factura == 'ticket' else 'Factura Electrónica' }}</strong>
+            {% if p.nota_cliente %} · Nota: {{ p.nota_cliente }}{% endif %}
+          </div>
+          {% if p.link_pago %}
+            <a href="{{ p.link_pago }}" target="_blank" class="link-pago-btn">💳 Ir al link de pago</a>
+          {% elif p.estado == 'pendiente' or p.estado == 'en_proceso' %}
+            <span style="font-size:.83rem;color:#9ca3af">⏳ Esperando link de pago...</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty-state">
+      <p style="font-size:2.5rem;margin-bottom:.5rem">🛒</p>
+      <p style="font-weight:600;color:#374151">Aún no tiene pedidos</p>
+      <p style="font-size:.88rem;margin-top:.3rem">Sus compras tramitadas aparecerán aquí.</p>
+      <a href="/catalogo" style="display:inline-block;margin-top:1.2rem;padding:10px 24px;background:var(--primary);color:#fff;border-radius:8px;font-weight:600;font-size:.88rem">Ver catálogo →</a>
+    </div>
+  {% endif %}
+
+</div>
+
+<script>
+function togglePedido(idx) {
+  const body = document.getElementById('ped-' + idx);
+  body.classList.toggle('open');
+}
+</script>
+{% endblock %}

@@ -153,6 +153,20 @@
         <span class="cart-badge" style="display:none;position:absolute;top:-8px;right:-10px;background:#ef4444;color:#fff;border-radius:50%;width:18px;height:18px;font-size:.65rem;font-weight:700;align-items:center;justify-content:center">0</span>
       </a>
     </li>
+    <li>
+      {% if request.session.get('cliente') %}
+        <a href="/mi-cuenta" title="Mi cuenta" style="display:inline-flex;align-items:center;gap:.4rem;font-size:.85rem">
+          {% if request.session.get('cliente').foto_url %}
+            <img src="{{ request.session.get('cliente').foto_url }}" style="width:28px;height:28px;border-radius:50%;border:2px solid var(--accent)">
+          {% else %}
+            👤
+          {% endif %}
+          <span style="max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ request.session.get('cliente').nombre.split()[0] if request.session.get('cliente').nombre else 'Mi cuenta' }}</span>
+        </a>
+      {% else %}
+        <a href="/login" title="Iniciar sesión" style="display:inline-flex;align-items:center;gap:.3rem;font-size:.85rem">👤</a>
+      {% endif %}
+    </li>
   </ul>
   <button class="hamburger" onclick="document.getElementById('navLinks').classList.toggle('open')" aria-label="Menú">
     <span></span><span></span><span></span>

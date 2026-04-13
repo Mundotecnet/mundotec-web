@@ -215,3 +215,17 @@ def init_db():
         print("[DB] PostgreSQL mundotec_web inicializada correctamente.")
     finally:
         conn.close()
+
+# ── Migraciones adicionales (corren en init_db via ALTER IF NOT EXISTS) ───────
+DDL_CLIENTES = '''
+CREATE TABLE IF NOT EXISTS clientes (
+    id           SERIAL PRIMARY KEY,
+    google_id    VARCHAR(100) UNIQUE NOT NULL,
+    email        VARCHAR(200) NOT NULL,
+    nombre       VARCHAR(200),
+    foto_url     VARCHAR(500),
+    creado_en    TIMESTAMP DEFAULT NOW(),
+    ultimo_login TIMESTAMP DEFAULT NOW()
+);
+ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS cliente_id INT REFERENCES clientes(id);
+'''

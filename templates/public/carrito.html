@@ -77,7 +77,7 @@
     <div class="resumen-row"><span>IVA ({{ iva }}%)</span><span id="sumIva">₡0</span></div>
     <div class="resumen-total"><span>TOTAL</span><span id="sumTotal">₡0</span></div>
     <button class="cotizar-btn" onclick="abrirModal()">💬 Solicitar cotización</button>
-    <button class="cotizar-btn" onclick="abrirModalPedido()" style="background:var(--primary);margin-top:.6rem">🛒 Tramitar compra</button>
+    <button class="cotizar-btn" onclick="verificarAuthYTramitar()" style="background:var(--primary);margin-top:.6rem">🛒 Tramitar compra</button>
     <a href="/catalogo" style="display:block;text-align:center;margin-top:.8rem;font-size:.83rem;color:var(--gray)">← Seguir agregando productos</a>
   </div>
 </div>
@@ -327,6 +327,22 @@ async function enviarCotizacion() {
 }
 
 document.addEventListener('DOMContentLoaded', () => { renderCart(); updateNavBadge(); });
+
+// ── Auth check para Tramitar Compra ──────────────────────────────────────────
+const CLIENTE_LOGUEADO = {{ 'true' if cliente else 'false' }};
+
+function verificarAuthYTramitar() {
+  if (!CLIENTE_LOGUEADO) {
+    window.location.href = '/login?next=/carrito';
+    return;
+  }
+  {% if cliente %}
+  // Pre-llenar con datos de la cuenta Google
+  document.getElementById('pNombre').value = '{{ cliente.nombre or "" }}';
+  document.getElementById('pEmail').value  = '{{ cliente.email or "" }}';
+  {% endif %}
+  abrirModalPedido();
+}
 
 
 // ── Tramitar Compra ──────────────────────────────────────────────────────────

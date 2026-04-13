@@ -20,6 +20,8 @@ from admin.proyectos   import (get_proyectos, get_proyecto, crear_proyecto,
 from admin.importar_imagenes import listar_pendientes, ejecutar_importacion
 from admin.generar_desc import generar_descripcion, get_productos_sin_descripcion
 from admin.actualizar_precios import comparar_precios, aplicar_precios
+from auth.google_auth import oauth, upsert_cliente, get_cliente_session
+
 from admin.config_site import (get_config, set_config_bulk, get_contactos,
                                 marcar_leido, get_stats_contacto)
 from public.catalogo_pub import (get_catalogo_publico, get_producto_publico,
@@ -175,10 +177,12 @@ async def api_producto(prod_id: int):
 
 @app.get("/carrito", response_class=HTMLResponse)
 async def carrito(request: Request):
-    cfg = get_config()
-    iva = int(cfg.get("iva_porcentaje") or 13)
+    cfg     = get_config()
+    iva     = int(cfg.get("iva_porcentaje") or 13)
+    cliente = get_cliente_session(request)
     return templates.TemplateResponse("public/carrito.html", {
-        "request": request, "cfg": cfg, "pagina": "carrito", "iva": iva
+        "request": request, "cfg": cfg, "pagina": "carrito", "iva": iva,
+        "cliente": cliente
     })
 
 @app.post("/carrito/cotizar")
@@ -218,6 +222,9 @@ async def carrito_cotizar(request: Request):
 
 @app.post("/carrito/pedido")
 async def carrito_pedido(request: Request):
+    cliente = get_cliente_session(request)
+    if not cliente:
+        raise HTTPException(401, "Debe iniciar sesión para tramitar una compra")
     data          = await request.json()
     tipo_factura  = data.get("tipo_factura", "ticket")
     nombre        = data.get("nombre", "")
@@ -235,9 +242,11 @@ async def carrito_pedido(request: Request):
     if not nombre or not items:
         raise HTTPException(400, "Datos incompletos")
 
+    cliente_id = cliente.get('id') if cliente else None
     ped = registrar_pedido(tipo_factura, nombre, email, telefono, cedula,
                            direccion, cod_actividad, nota_cliente,
-                           items, total_sin_iva, total_con_iva, iva_pct)
+                           items, total_sin_iva, total_con_iva, iva_pct,
+                           cliente_id=cliente_id)
 
     num_pedido = ped.get("num_pedido", "") if ped else ""
     pedido_id  = ped.get("id", 0) if ped else 0
@@ -250,6 +259,69 @@ async def carrito_pedido(request: Request):
 
     return {"ok": True, "id": pedido_id, "num_pedido": num_pedido}
 
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AUTH — Google OAuth + Mi Cuenta
+# ─────────────────────────────────────────────────────────────────────────────
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request, next: str = "/carrito"):
+    if get_cliente_session(request):
+        return RedirectResponse(next, 302)
+    return templates.TemplateResponse("public/login.html", {
+        "request": request, "next": next
+    })
+
+@app.get("/auth/google")
+async def auth_google(request: Request, next: str = "/carrito"):
+    request.session["oauth_next"] = next
+    redirect_uri = str(request.url_for("auth_google_callback"))
+    return await oauth.google.authorize_redirect(request, redirect_uri)
+
+@app.get("/auth/google/callback", name="auth_google_callback")
+async def auth_google_callback(request: Request):
+    try:
+        token     = await oauth.google.authorize_access_token(request)
+        userinfo  = token.get("userinfo") or {}
+        google_id = userinfo.get("sub")
+        email     = userinfo.get("email", "")
+        nombre    = userinfo.get("name", "")
+        foto_url  = userinfo.get("picture", "")
+        if not google_id:
+            raise HTTPException(400, "No se pudo obtener info de Google")
+        cliente = upsert_cliente(google_id, email, nombre, foto_url)
+        request.session["cliente"] = {
+            "id": cliente["id"], "email": email,
+            "nombre": nombre, "foto_url": foto_url
+        }
+        next_url = request.session.pop("oauth_next", "/carrito")
+        return RedirectResponse(next_url, 302)
+    except Exception as e:
+        return RedirectResponse("/login?error=1", 302)
+
+@app.get("/auth/logout")
+async def auth_logout(request: Request):
+    request.session.pop("cliente", None)
+    return RedirectResponse("/", 302)
+
+@app.get("/mi-cuenta", response_class=HTMLResponse)
+async def mi_cuenta(request: Request):
+    cliente = get_cliente_session(request)
+    if not cliente:
+        return RedirectResponse("/login?next=/mi-cuenta", 302)
+    import json
+    pedidos_raw = dbq(
+        "SELECT * FROM pedidos WHERE cliente_id=%s ORDER BY creado_en DESC",
+        (cliente["id"],)
+    )
+    for p in pedidos_raw:
+        try:
+            p["items_parsed"] = json.loads(p["items"]) if isinstance(p["items"], str) else p["items"]
+        except Exception:
+            p["items_parsed"] = []
+    return templates.TemplateResponse("public/mi_cuenta.html", {
+        "request": request, "cliente": cliente, "pedidos": pedidos_raw
+    })
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ADMIN — Login
