@@ -183,7 +183,7 @@ function updateNavBadge() {
   });
 }
 
-function renderCart() {
+async function renderCart() {
   const cart = getCart();
   const body = document.getElementById('cartBody');
   if (!cart.length) {
@@ -197,16 +197,34 @@ function renderCart() {
 
   let sinIva = 0, total = 0;
   body.innerHTML = '';
+
+  // Cargar descuentos de volumen para todos los productos del carrito
+  const dvCache = {};
+  await Promise.all(cart.map(async it => {
+    if (!it.id) return;
+    try {
+      const r = await fetch(`/api/precio-volumen/${it.id}/${it.cantidad}`);
+      dvCache[`${it.id}-${it.cantidad}`] = await r.json();
+    } catch { dvCache[`${it.id}-${it.cantidad}`] = { descuento_pct: 0 }; }
+  }));
+
   cart.forEach((it, idx) => {
-    const pRef  = parseFloat(it.precio_ref) || 0;
-    const pIva  = pRef * (1 + IVA_PCT / 100);
-    const iva   = pIva - pRef;
-    const sub   = pIva * it.cantidad;
+    const pBase  = parseFloat(it.precio_ref) || 0;
+    const dv     = dvCache[`${it.id}-${it.cantidad}`] || {};
+    const dvPct  = parseFloat(dv.descuento_pct) || 0;
+    const pRef   = pBase * (1 - dvPct / 100);   // precio con descuento vol.
+    const pIva   = pRef * (1 + IVA_PCT / 100);
+    const sub    = pIva * it.cantidad;
     sinIva += pRef * it.cantidad;
     total  += sub;
+
     const img = it.imagen
-      ? `<img src="${it.imagen}" style="width:56px;height:56px;object-fit:cover;border-radius:8px">`
+      ? `<img src="${it.imagen}" style="width:56px;height:56px;object-fit:contain;border-radius:8px;background:#f9fafb">`
       : `<div style="width:56px;height:56px;border-radius:8px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;font-size:1.4rem">📦</div>`;
+
+    const dvBadge = dvPct > 0
+      ? `<div style="font-size:.68rem;color:#16a34a;font-weight:700;margin-top:2px">📦 Vol. -${dvPct}% aplicado</div>`
+      : '';
 
     body.innerHTML += `
       <tr>
@@ -214,9 +232,10 @@ function renderCart() {
         <td>
           <div style="font-weight:600;font-size:.9rem">${it.nombre}</div>
           <div style="font-size:.75rem;color:#6b7280">Cód: ${it.codigo}</div>
+          ${dvBadge}
         </td>
-        <td style="font-size:.85rem">${pRef > 0 ? fmt(pRef) : '—'}</td>
-        <td style="font-size:.85rem;color:#e67e22">${pRef > 0 ? fmt(iva) : '—'}</td>
+        <td style="font-size:.85rem">${pRef > 0 ? fmt(pRef) : '—'}${dvPct > 0 ? `<br><span style="font-size:.7rem;color:#9ca3af;text-decoration:line-through">₡${Math.round(pBase).toLocaleString('es-CR')}</span>` : ''}</td>
+        <td style="font-size:.85rem;color:#e67e22">${pRef > 0 ? fmt(pIva - pRef) : '—'}</td>
         <td style="font-weight:600">${pRef > 0 ? fmt(pIva) : '—'}</td>
         <td>
           <div class="qty-ctrl">
@@ -308,6 +327,7 @@ async function enviarCotizacion() {
 }
 
 document.addEventListener('DOMContentLoaded', () => { renderCart(); updateNavBadge(); });
+
 
 // ── Tramitar Compra ──────────────────────────────────────────────────────────
 function abrirModalPedido()  { document.getElementById('modalPedido').classList.add('open'); }

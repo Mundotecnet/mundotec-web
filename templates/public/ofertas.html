@@ -1,0 +1,148 @@
+{% extends "public/base.html" %}
+{% block title %}Ofertas especiales{% endblock %}
+
+{% block head %}
+<style>
+.ofertas-hero {
+  background:linear-gradient(135deg,#dc2626 0%,#991b1b 100%);
+  color:#fff; text-align:center; padding:3rem 1rem 2.5rem;
+}
+.ofertas-hero h1 { font-size:2rem; font-weight:800; margin-bottom:.5rem; }
+.ofertas-hero p  { font-size:1rem; opacity:.9; }
+
+.of-grid {
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+  gap:1.4rem; padding:2rem var(--gutter);
+  max-width:1200px; margin:0 auto;
+}
+
+.of-card {
+  background:#fff; border-radius:14px; overflow:hidden;
+  box-shadow:0 2px 12px rgba(0,0,0,.09); border:2px solid #fee2e2;
+  display:flex; flex-direction:column; transition:transform .2s,box-shadow .2s;
+}
+.of-card:hover { transform:translateY(-3px); box-shadow:0 6px 24px rgba(0,0,0,.13); }
+
+.of-badge {
+  position:absolute; top:.7rem; left:.7rem; z-index:2;
+  background:#ef4444; color:#fff; font-size:.72rem; font-weight:800;
+  padding:4px 10px; border-radius:20px; letter-spacing:.03em;
+}
+.of-img-wrap { position:relative; aspect-ratio:3/2; background:#f8fafc; }
+.of-img-wrap img { width:100%; height:100%; object-fit:contain; padding:8px; }
+.of-img-wrap .no-img { display:flex; align-items:center; justify-content:center; font-size:3rem; height:100%; }
+
+.of-body { padding:1rem; flex:1; }
+.of-cat  { font-size:.68rem; color:var(--accent); font-weight:700; text-transform:uppercase; margin-bottom:.2rem; }
+.of-nombre { font-size:.92rem; font-weight:700; color:var(--dark); margin-bottom:.7rem; line-height:1.3; }
+
+.of-precios { margin-bottom:.8rem; }
+.of-precio-oferta { font-size:1.3rem; font-weight:800; color:#dc2626; }
+.of-precio-normal { font-size:.8rem; color:#9ca3af; text-decoration:line-through; margin-left:.4rem; }
+.of-iva { font-size:.7rem; color:#9ca3af; display:block; margin-top:.1rem; }
+
+.of-countdown {
+  font-size:.72rem; color:#9ca3af;
+  background:#fef2f2; border-radius:6px; padding:4px 8px;
+  margin-bottom:.8rem; display:flex; align-items:center; gap:.4rem;
+}
+.of-countdown strong { color:#dc2626; font-size:.8rem; }
+
+.of-footer { padding:.8rem 1rem; border-top:1px solid #f0f0f0; display:flex; gap:.5rem; }
+.of-footer a, .of-footer button {
+  flex:1; text-align:center; padding:8px; border-radius:7px;
+  font-size:.82rem; font-weight:600; cursor:pointer; border:none;
+}
+
+.sin-ofertas {
+  text-align:center; padding:5rem 1rem; color:#9ca3af;
+}
+.sin-ofertas .icon { font-size:3rem; margin-bottom:1rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ofertas-hero">
+  <div>🏷️</div>
+  <h1>Ofertas especiales</h1>
+  <p>Precios exclusivos por tiempo limitado — ¡no se los pierda!</p>
+</div>
+
+{% if ofertas %}
+<div class="of-grid">
+  {% for o in ofertas %}
+  {% set precio_oferta_iva = (o.precio_oferta | float) * 1.13 %}
+  {% set precio_normal_iva = (o.precio_ref    | float) * 1.13 %}
+  <div class="of-card">
+
+    <div class="of-img-wrap">
+      <span class="of-badge">
+        {{ o.etiqueta or 'OFERTA' }}
+        {% if o.descuento_pct %} -{{ o.descuento_pct | int }}%{% endif %}
+      </span>
+      {% if o.imagen_principal %}
+        <img src="{{ o.imagen_principal }}" alt="{{ o.producto_nombre }}">
+      {% else %}
+        <div class="no-img">📦</div>
+      {% endif %}
+    </div>
+
+    <div class="of-body">
+      {% if o.categoria %}<div class="of-cat">{{ o.categoria }}</div>{% endif %}
+      <div class="of-nombre">{{ o.producto_nombre }}</div>
+
+      <div class="of-precios">
+        <span class="of-precio-oferta">₡{{ "{:,.0f}".format(precio_oferta_iva) }}</span>
+        {% if o.precio_ref %}
+        <span class="of-precio-normal">₡{{ "{:,.0f}".format(precio_normal_iva) }}</span>
+        {% endif %}
+        <span class="of-iva">Precio con IVA (13%) incluido</span>
+      </div>
+
+      <div class="of-countdown" id="cd-wrap-{{ o.id }}">
+        ⏱ Termina: <strong id="cd-{{ o.id }}" data-fin="{{ o.fecha_fin[:19] }}"></strong>
+      </div>
+    </div>
+
+    <div class="of-footer">
+      <a href="/catalogo/{{ o.producto_id }}"
+         style="background:var(--primary);color:#fff">Ver detalle</a>
+      <button onclick="agregarAlCarrito({{ o.producto_id }},'{{ o.producto_codigo }}','{{ o.producto_nombre | replace("'","\\'") }}',{{ o.precio_oferta }},'{{ o.imagen_principal or "" }}')"
+              style="background:var(--accent);color:#fff">🛒 Agregar</button>
+    </div>
+
+  </div>
+  {% endfor %}
+</div>
+
+<script>
+// Countdowns para todas las ofertas
+document.querySelectorAll('[id^="cd-"]').forEach(el => {
+  if (!el.dataset.fin) return;
+  const fin = new Date(el.dataset.fin.replace(' ','T'));
+  function tick() {
+    const diff = fin - new Date();
+    if (diff <= 0) { el.textContent = 'Expirada'; return; }
+    const d = Math.floor(diff / 86400000);
+    const h = Math.floor((diff % 86400000) / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    el.textContent = (d > 0 ? d + 'd ' : '') +
+      String(h).padStart(2,'0') + 'h ' +
+      String(m).padStart(2,'0') + 'm ' +
+      String(s).padStart(2,'0') + 's';
+  }
+  tick();
+  setInterval(tick, 1000);
+});
+</script>
+
+{% else %}
+<div class="sin-ofertas">
+  <div class="icon">🏷️</div>
+  <h3>No hay ofertas activas en este momento</h3>
+  <p style="margin-top:.5rem">Visítenos pronto, ¡pronto tendremos nuevas promociones!</p>
+  <a href="/catalogo" style="display:inline-block;margin-top:1.5rem;background:var(--primary);color:#fff;padding:10px 24px;border-radius:8px;font-weight:600">Ver catálogo completo</a>
+</div>
+{% endif %}
+{% endblock %}

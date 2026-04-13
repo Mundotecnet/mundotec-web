@@ -92,6 +92,27 @@
 .ia-toolbar span { font-size:.85rem; color:#6b7280; }
 .counter { font-weight:700; color:var(--primary); }
 
+/* checkbox de selección en tarjeta */
+.ia-check {
+  position:absolute; top:.6rem; right:.6rem;
+  width:18px; height:18px; cursor:pointer; accent-color:var(--primary);
+}
+.ia-head { position:relative; }
+
+/* barra de selección flotante */
+.sel-bar {
+  display:none; position:sticky; bottom:1rem; z-index:20;
+  background:var(--primary); color:#fff; border-radius:10px;
+  padding:.7rem 1.2rem; margin-top:1rem;
+  align-items:center; gap:1rem; flex-wrap:wrap;
+  box-shadow:0 4px 16px rgba(0,0,0,.2);
+}
+.sel-bar.visible { display:flex; }
+.sel-bar span { font-size:.9rem; font-weight:600; flex:1; }
+.btn-sel { background:rgba(255,255,255,.15); color:#fff; border:1.5px solid rgba(255,255,255,.4);
+           padding:6px 14px; border-radius:7px; font-size:.82rem; font-weight:600; cursor:pointer; }
+.btn-sel:hover { background:rgba(255,255,255,.28); }
+
 /* sin api key */
 .no-key {
   background:#fef2f2; border:1px solid #fecaca; border-radius:10px;
@@ -104,11 +125,11 @@
 
 {% if not api_ok %}
 <div class="no-key">
-  <span style="font-size:1.5rem">⚠️</span>
+  <span style="font-size:1.5rem">⚙️</span>
   <div>
-    <strong>API Key de Claude no configurada.</strong><br>
-    Agregue la variable de entorno <code>ANTHROPIC_API_KEY=sk-ant-...</code>
-    en el archivo del servicio systemd o en <code>config.py</code> y reinicie el servicio.
+    <strong>Modo local activo</strong> — sin API Key de Claude.<br>
+    Las descripciones se generan automáticamente analizando el nombre del producto.
+    Puede editarlas antes de aprobar. Para activar IA configure <code>ANTHROPIC_API_KEY</code>.
   </div>
 </div>
 {% endif %}
@@ -120,9 +141,12 @@
     <span class="counter" id="cnt-sin">{{ productos|selectattr('descripcion_web','equalto',None)|list|length + productos|selectattr('descripcion_web','equalto','')|list|length }}</span> sin descripción ·
     <span class="counter" id="cnt-aprobados">0</span> aprobados en esta sesión
   </span>
-  <div style="margin-left:auto;display:flex;gap:.5rem">
-    <button onclick="generarTodos()" class="btn btn-accent btn-sm" {% if not api_ok %}disabled{% endif %}>
-      ⚡ Generar todos los que faltan
+  <div style="margin-left:auto;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+    <label style="font-size:.82rem;color:#6b7280;display:flex;align-items:center;gap:.35rem;cursor:pointer">
+      <input type="checkbox" id="chk-todos" onchange="toggleTodos(this.checked)"> Seleccionar todos
+    </label>
+    <button onclick="generarTodos()" class="btn btn-accent btn-sm" title="Genera solo los que no tienen descripción">
+      ⚡ Generar pendientes
     </button>
     <button onclick="aprobarTodos()" class="btn btn-primary btn-sm">
       ✅ Aprobar todos generados
@@ -151,6 +175,8 @@
           id="status-{{ p.id }}">
       {% if p.descripcion_web %}✅ Con desc{% else %}⏳ Sin desc{% endif %}
     </span>
+    <input type="checkbox" class="ia-check" data-id="{{ p.id }}"
+           onchange="actualizarSeleccion()" title="Seleccionar para acción en lote">
   </div>
 
   <!-- Cuerpo -->
@@ -168,10 +194,10 @@
   <!-- Footer -->
   <div class="ia-footer">
     <div class="ia-spinner" id="spin-{{ p.id }}"></div>
-    <button onclick="generar({{ p.id }}, '{{ p.nombre|replace("'","\\'") }}', '{{ (p.categoria or '')|replace("'","\\'") }}', '{{ (p.descripcion_syma or '')|replace("'","\\'")|replace('\n',' ')[:120] }}')"
-            class="btn btn-ghost btn-sm" {% if not api_ok %}disabled{% endif %}
+    <button onclick="generar({{ p.id }}, '{{ p.nombre|replace("'","\\'") }}', '{{ (p.categoria or '')|replace("'","\\'") }}', '{{ (p.descripcion_syma or '')|replace("'","\\'")|replace('\n',' ')|truncate(120,true,'') }}')"
+            class="btn btn-ghost btn-sm"
             id="btn-gen-{{ p.id }}">
-      🤖 Generar
+      {% if p.descripcion_web %}🔄 Re-generar{% else %}🤖 Generar{% endif %}
     </button>
     <button onclick="aprobar({{ p.id }})"
             class="btn btn-primary btn-sm" style="margin-left:auto"
@@ -182,6 +208,14 @@
 
 </div>
 {% endfor %}
+</div>
+
+<!-- Barra flotante de selección -->
+<div class="sel-bar" id="selBar">
+  <span id="sel-info">0 productos seleccionados</span>
+  <button class="btn-sel" onclick="generarSeleccionados()">🔄 Re-generar seleccionados</button>
+  <button class="btn-sel" onclick="aprobarSeleccionados()">✅ Aprobar seleccionados</button>
+  <button class="btn-sel" onclick="limpiarSeleccion()" title="Cancelar selección">✕</button>
 </div>
 
 <script>
@@ -207,7 +241,6 @@ async function generar(id, nombre, categoria, descSyma) {
       body: JSON.stringify({ id, nombre, categoria, descripcion_syma: descSyma })
     });
     const d = await r.json();
-
     if (d.error) throw new Error(d.error);
 
     // Descripción
@@ -223,9 +256,10 @@ async function generar(id, nombre, categoria, descSyma) {
       charsDiv.appendChild(row);
     });
 
-    card.className  = 'ia-card';
+    card.className  = 'ia-card';  // quita aprobado/error, listo para editar
     badge.className = 'ia-status status-gen';
-    badge.textContent = '🤖 Sugerido';
+    badge.textContent = d.fuente === 'claude' ? '🤖 IA Claude' : '⚙️ Sugerido';
+    btnG.textContent = '🔄 Re-generar';
 
   } catch(e) {
     card.className  = 'ia-card error-api';
@@ -243,6 +277,10 @@ async function generar(id, nombre, categoria, descSyma) {
 async function aprobar(id) {
   const desc  = document.getElementById(`desc-${id}`).value.trim();
   if (!desc) { alert('No hay descripción para aprobar.'); return; }
+
+  const btnAp = document.getElementById(`btn-ap-${id}`);
+  btnAp.disabled = true;
+  btnAp.textContent = '⏳ Guardando…';
 
   // Recoger características editadas
   const chars = [];
@@ -264,27 +302,84 @@ async function aprobar(id) {
     badge.textContent = '✅ Aprobado';
     aprobados++;
     document.getElementById('cnt-aprobados').textContent = aprobados;
+    btnAp.textContent = '✅ Aprobar';
+  } else {
+    btnAp.textContent = '❌ Error';
+    setTimeout(() => { btnAp.textContent = '✅ Aprobar'; }, 2000);
   }
+  btnAp.disabled = false;
 }
 
-// ── Generar todos los que no tienen descripción ───────────────────────────────
+// ── Selección ─────────────────────────────────────────────────────────────────
+function seleccionados() {
+  return [...document.querySelectorAll('.ia-check:checked')].map(c => c.dataset.id);
+}
+
+function actualizarSeleccion() {
+  const ids = seleccionados();
+  const bar = document.getElementById('selBar');
+  document.getElementById('sel-info').textContent = `${ids.length} producto${ids.length !== 1 ? 's' : ''} seleccionado${ids.length !== 1 ? 's' : ''}`;
+  bar.classList.toggle('visible', ids.length > 0);
+
+  // Sincronizar checkbox "Seleccionar todos"
+  const total = document.querySelectorAll('.ia-check').length;
+  const chkTodos = document.getElementById('chk-todos');
+  chkTodos.indeterminate = ids.length > 0 && ids.length < total;
+  chkTodos.checked = ids.length === total;
+}
+
+function toggleTodos(checked) {
+  document.querySelectorAll('.ia-check').forEach(c => c.checked = checked);
+  actualizarSeleccion();
+}
+
+function limpiarSeleccion() {
+  document.querySelectorAll('.ia-check').forEach(c => c.checked = false);
+  document.getElementById('chk-todos').checked = false;
+  actualizarSeleccion();
+}
+
+// ── Generar solo los pendientes (sin descripción) ─────────────────────────────
 async function generarTodos() {
   const cards = document.querySelectorAll('.ia-card:not(.aprobado)');
   for (const card of cards) {
     const id  = card.dataset.id;
     const btn = document.getElementById(`btn-gen-${id}`);
     if (!btn || btn.disabled) continue;
-    // leer data del botón generar
     btn.click();
-    await new Promise(r => setTimeout(r, 1800)); // esperar entre llamadas
+    await new Promise(r => setTimeout(r, 1800));
   }
 }
 
-// ── Aprobar todos los que tienen sugerencia ───────────────────────────────────
+// ── Re-generar seleccionados ──────────────────────────────────────────────────
+async function generarSeleccionados() {
+  const ids = seleccionados();
+  if (!ids.length) return;
+  for (const id of ids) {
+    const btn = document.getElementById(`btn-gen-${id}`);
+    if (!btn || btn.disabled) continue;
+    btn.click();
+    await new Promise(r => setTimeout(r, 1800));
+  }
+  limpiarSeleccion();
+}
+
+// ── Aprobar seleccionados ─────────────────────────────────────────────────────
+async function aprobarSeleccionados() {
+  const ids = seleccionados();
+  if (!ids.length) return;
+  for (const id of ids) {
+    const desc = document.getElementById(`desc-${id}`)?.value.trim();
+    if (desc) await aprobar(id);
+  }
+  limpiarSeleccion();
+}
+
+// ── Aprobar todos los que tienen sugerencia nueva (no aprobados aún) ──────────
 async function aprobarTodos() {
   const cards = document.querySelectorAll('.ia-card:not(.aprobado)');
   for (const card of cards) {
-    const id = card.dataset.id;
+    const id   = card.dataset.id;
     const desc = document.getElementById(`desc-${id}`)?.value.trim();
     if (desc) await aprobar(id);
   }

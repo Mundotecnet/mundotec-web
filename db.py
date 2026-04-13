@@ -120,6 +120,31 @@ CREATE TABLE IF NOT EXISTS pedidos (
     actualizado_en  TIMESTAMP    DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS ofertas (
+    id             SERIAL PRIMARY KEY,
+    producto_id    INT           NOT NULL REFERENCES catalogo_productos(id) ON DELETE CASCADE,
+    precio_oferta  NUMERIC(15,2) NOT NULL,
+    descuento_pct  NUMERIC(5,2),
+    etiqueta       VARCHAR(80)   DEFAULT 'OFERTA',
+    fecha_inicio   TIMESTAMP     NOT NULL DEFAULT NOW(),
+    fecha_fin      TIMESTAMP     NOT NULL,
+    activa         BOOLEAN       DEFAULT TRUE,
+    creado_en      TIMESTAMP     DEFAULT NOW()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ofertas_unica ON ofertas(producto_id)
+    WHERE activa = TRUE;
+
+CREATE TABLE IF NOT EXISTS descuentos_volumen (
+    id             SERIAL PRIMARY KEY,
+    producto_id    INT           NOT NULL REFERENCES catalogo_productos(id) ON DELETE CASCADE,
+    cantidad_min   INT           NOT NULL,  -- desde esta cantidad aplica
+    descuento_pct  NUMERIC(5,2)  NOT NULL,  -- % de descuento sobre precio_ref
+    activo         BOOLEAN       DEFAULT TRUE,
+    creado_en      TIMESTAMP     DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_dv_producto ON descuentos_volumen(producto_id)
+    WHERE activo = TRUE;
+
 -- Datos iniciales de configuración
 INSERT INTO site_config (clave, valor) VALUES
     ('empresa_nombre',         'MUNDOTEC'),

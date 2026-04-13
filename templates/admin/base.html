@@ -117,6 +117,8 @@
     <a href="/admin" class="{{ 'activo' if request.url.path=='/admin' }}">🏠 Dashboard</a>
     <div class="section-lbl">Contenido</div>
     <a href="/admin/catalogo"      class="{{ 'activo' if '/catalogo' in request.url.path }}">📦 Catálogo</a>
+    <a href="/admin/ofertas"            class="{{ 'activo' if '/ofertas'             in request.url.path }}">🏷️ Ofertas</a>
+    <a href="/admin/descuentos-volumen" class="{{ 'activo' if '/descuentos-volumen' in request.url.path }}">📦 Desc. por volumen</a>
     <a href="/admin/proyectos"     class="{{ 'activo' if '/proyectos' in request.url.path }}">🏗️ Proyectos</a>
     <a href="/admin/contacto"      class="{{ 'activo' if '/contacto' in request.url.path }}">📬 Contacto</a>
     <a href="/admin/cotizaciones"  class="{{ 'activo' if '/cotizaciones' in request.url.path }}">💼 Oportunidades</a>

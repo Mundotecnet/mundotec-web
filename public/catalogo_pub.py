@@ -23,26 +23,142 @@ def get_catalogo_publico(categoria="", busqueda="", destacado=False) -> list:
         filtros.append("(p.nombre ILIKE %s OR p.descripcion_web ILIKE %s)")
         params += [f"%{busqueda}%", f"%{busqueda}%"]
     where = "WHERE " + " AND ".join(filtros)
-    prods = query(f"""
+    return query(f"""
         SELECT p.*,
-               i.url_path AS imagen_principal
+               i.url_path  AS imagen_principal,
+               o.id        AS oferta_id,
+               o.precio_oferta,
+               o.descuento_pct,
+               o.etiqueta  AS oferta_etiqueta,
+               o.fecha_fin AS oferta_fin,
+               COALESCE(o.precio_oferta, p.precio_ref) AS precio_efectivo
         FROM catalogo_productos p
         LEFT JOIN catalogo_imagenes i ON i.producto_id=p.id AND i.es_principal=TRUE
+        LEFT JOIN ofertas o ON o.producto_id=p.id
+                           AND o.activa=TRUE
+                           AND o.fecha_inicio <= NOW()
+                           AND o.fecha_fin    >= NOW()
         {where}
         ORDER BY p.orden, p.nombre
     """, params)
-    return prods
 
 
 def get_producto_publico(prod_id: int) -> dict:
-    p = query("SELECT * FROM catalogo_productos WHERE id=%s AND activo=TRUE",
-              (prod_id,), many=False)
+    p = query("""
+        SELECT p.*,
+               o.id        AS oferta_id,
+               o.precio_oferta,
+               o.descuento_pct,
+               o.etiqueta  AS oferta_etiqueta,
+               o.fecha_fin AS oferta_fin,
+               COALESCE(o.precio_oferta, p.precio_ref) AS precio_efectivo
+        FROM catalogo_productos p
+        LEFT JOIN ofertas o ON o.producto_id=p.id
+                           AND o.activa=TRUE
+                           AND o.fecha_inicio <= NOW()
+                           AND o.fecha_fin    >= NOW()
+        WHERE p.id=%s AND p.activo=TRUE
+    """, (prod_id,), many=False)
     if not p:
         return None
-    p["imagenes"] = query("SELECT * FROM catalogo_imagenes WHERE producto_id=%s ORDER BY orden, es_principal DESC", (prod_id,))
-    p["specs"]    = query("SELECT * FROM catalogo_specs    WHERE producto_id=%s ORDER BY orden", (prod_id,))
+    p["imagenes"]  = query("SELECT * FROM catalogo_imagenes WHERE producto_id=%s ORDER BY orden, es_principal DESC", (prod_id,))
+    p["specs"]     = query("SELECT * FROM catalogo_specs    WHERE producto_id=%s ORDER BY orden", (prod_id,))
+    p["vol_descuentos"] = query("""
+        SELECT * FROM descuentos_volumen
+        WHERE producto_id=%s AND activo=TRUE ORDER BY cantidad_min ASC
+    """, (prod_id,))
     return p
 
+
+# ── OFERTAS ──────────────────────────────────────────────────────────────────
+
+def get_ofertas_vigentes() -> list:
+    return query("""
+        SELECT o.*, p.nombre AS producto_nombre, p.codigo AS producto_codigo,
+               p.precio_ref, p.categoria,
+               i.url_path AS imagen_principal
+        FROM ofertas o
+        JOIN catalogo_productos p ON p.id=o.producto_id AND p.activo=TRUE
+        LEFT JOIN catalogo_imagenes i ON i.producto_id=p.id AND i.es_principal=TRUE
+        WHERE o.activa=TRUE AND o.fecha_inicio <= NOW() AND o.fecha_fin >= NOW()
+        ORDER BY o.fecha_fin ASC
+    """)
+
+def get_todas_las_ofertas() -> list:
+    return query("""
+        SELECT o.*, p.nombre AS producto_nombre, p.codigo AS producto_codigo, p.precio_ref
+        FROM ofertas o
+        JOIN catalogo_productos p ON p.id=o.producto_id
+        ORDER BY o.creado_en DESC
+    """)
+
+def get_oferta_by_id(oferta_id: int) -> dict:
+    return query("SELECT * FROM ofertas WHERE id=%s", (oferta_id,), many=False)
+
+def crear_oferta(producto_id, precio_oferta, descuento_pct, etiqueta, fecha_inicio, fecha_fin) -> dict:
+    return execute("""
+        INSERT INTO ofertas (producto_id, precio_oferta, descuento_pct, etiqueta, fecha_inicio, fecha_fin)
+        VALUES (%s,%s,%s,%s,%s,%s) RETURNING id
+    """, (producto_id, precio_oferta, descuento_pct or None,
+          etiqueta or 'OFERTA', fecha_inicio, fecha_fin), returning=True)
+
+def actualizar_oferta(oferta_id, datos: dict):
+    execute("""
+        UPDATE ofertas SET precio_oferta=%s, descuento_pct=%s, etiqueta=%s,
+               fecha_inicio=%s, fecha_fin=%s, activa=%s
+        WHERE id=%s
+    """, (datos["precio_oferta"], datos.get("descuento_pct"),
+          datos.get("etiqueta","OFERTA"), datos["fecha_inicio"],
+          datos["fecha_fin"], datos.get("activa", True), oferta_id))
+
+def eliminar_oferta(oferta_id):
+    execute("DELETE FROM ofertas WHERE id=%s", (oferta_id,))
+
+# ── DESCUENTOS POR VOLUMEN ────────────────────────────────────────────────────
+
+def get_descuentos_volumen(producto_id: int) -> list:
+    """Devuelve los escalones de descuento de un producto, ordenados por cantidad."""
+    return query("""
+        SELECT * FROM descuentos_volumen
+        WHERE producto_id=%s AND activo=TRUE
+        ORDER BY cantidad_min ASC
+    """, (producto_id,))
+
+def get_todos_descuentos_volumen() -> list:
+    """Para el panel admin — todos los descuentos con nombre de producto."""
+    return query("""
+        SELECT dv.*, p.nombre AS producto_nombre, p.codigo AS producto_codigo,
+               p.precio_ref
+        FROM descuentos_volumen dv
+        JOIN catalogo_productos p ON p.id = dv.producto_id
+        ORDER BY p.nombre, dv.cantidad_min
+    """)
+
+def crear_descuento_volumen(producto_id, cantidad_min, descuento_pct) -> dict:
+    return execute("""
+        INSERT INTO descuentos_volumen (producto_id, cantidad_min, descuento_pct)
+        VALUES (%s,%s,%s) RETURNING id
+    """, (producto_id, cantidad_min, descuento_pct), returning=True)
+
+def actualizar_descuento_volumen(dv_id, cantidad_min, descuento_pct, activo):
+    execute("""
+        UPDATE descuentos_volumen
+        SET cantidad_min=%s, descuento_pct=%s, activo=%s WHERE id=%s
+    """, (cantidad_min, descuento_pct, activo, dv_id))
+
+def eliminar_descuento_volumen(dv_id):
+    execute("DELETE FROM descuentos_volumen WHERE id=%s", (dv_id,))
+
+def get_precio_volumen(producto_id: int, cantidad: int) -> dict:
+    """Dado un producto y cantidad, devuelve el descuento aplicable."""
+    escalon = query("""
+        SELECT * FROM descuentos_volumen
+        WHERE producto_id=%s AND activo=TRUE AND cantidad_min <= %s
+        ORDER BY cantidad_min DESC LIMIT 1
+    """, (producto_id, cantidad), many=False)
+    return escalon
+
+# ─────────────────────────────────────────────────────────────────────────────
 
 def get_categorias_publico() -> list:
     rows = query("""

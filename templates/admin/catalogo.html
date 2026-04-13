@@ -149,12 +149,22 @@
 
       <!-- Categoría -->
       <td>
-        <input class="ie" type="text" style="min-width:130px"
-               value="{{ p.categoria or '' }}"
-               placeholder="—"
-               list="cat-list"
-               data-field="categoria" data-id="{{ p.id }}"
-               onblur="guardarCampo(this)" onkeydown="enterBlur(event,this)">
+        <div style="display:flex;gap:3px;align-items:center;min-width:150px">
+          <select class="ie" style="min-width:140px"
+                  data-field="categoria" data-id="{{ p.id }}"
+                  onchange="guardarCampo(this)">
+            <option value="">— sin categoría —</option>
+            {% for c in categorias %}
+            <option value="{{ c }}" {{ 'selected' if c == (p.categoria or '') }}>{{ c }}</option>
+            {% endfor %}
+            {% if p.categoria and p.categoria not in categorias %}
+            <option value="{{ p.categoria }}" selected>{{ p.categoria }}</option>
+            {% endif %}
+            <option value="__nueva__">✏️ Escribir nueva…</option>
+          </select>
+          <button onclick="nuevaCategoria({{ p.id }})" title="Nueva categoría"
+                  style="border:none;background:none;cursor:pointer;font-size:.9rem;padding:2px 4px;color:#6b7280">＋</button>
+        </div>
       </td>
 
       <!-- Precio -->
@@ -220,11 +230,6 @@
 </table>
 </div>
 
-<!-- datalist categorías -->
-<datalist id="cat-list">
-  {% for c in categorias %}<option value="{{ c }}">{% endfor %}
-</datalist>
-
 {% else %}
 <div class="card" style="text-align:center;padding:4rem;color:#9ca3af">
   <p style="font-size:2rem;margin-bottom:.5rem">📦</p>
@@ -267,9 +272,16 @@ function leerFila(id) {
   };
 }
 
-// ── Guardar campo al salir (blur) ─────────────────────────────────────────────
+// ── Guardar campo al salir (blur/change) ──────────────────────────────────────
 async function guardarCampo(el) {
   const id = el.dataset.id;
+
+  // Si eligió "Escribir nueva…" usar el botón de nueva categoría
+  if (el.tagName === 'SELECT' && el.value === '__nueva__') {
+    nuevaCategoria(id);
+    return;
+  }
+
   dot(id, 'saving');
   try {
     const data = leerFila(id);
@@ -280,6 +292,31 @@ async function guardarCampo(el) {
     });
     dot(id, r.ok ? 'saved' : 'error');
   } catch { dot(id, 'error'); }
+}
+
+// ── Nueva categoría libre ─────────────────────────────────────────────────────
+function nuevaCategoria(id) {
+  const nombre = prompt('Nombre de la nueva categoría:');
+  if (!nombre || !nombre.trim()) return;
+  const cat = nombre.trim();
+
+  // Actualizar TODOS los selects de categoría en la página
+  document.querySelectorAll(`select[data-field="categoria"]`).forEach(sel => {
+    // Agregar opción si no existe
+    const existe = [...sel.options].some(o => o.value === cat);
+    if (!existe) {
+      const opt = new Option(cat, cat);
+      sel.insertBefore(opt, sel.querySelector('option[value="__nueva__"]'));
+    }
+    // Seleccionar en el producto actual
+    if (sel.dataset.id == id) {
+      sel.value = cat;
+    }
+  });
+
+  // Guardar en el producto actual
+  const sel = document.querySelector(`select[data-field="categoria"][data-id="${id}"]`);
+  if (sel) guardarCampo(sel);
 }
 
 // ── Guardar toggle inmediatamente ─────────────────────────────────────────────

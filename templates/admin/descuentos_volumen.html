@@ -1,0 +1,259 @@
+{% extends "admin/base.html" %}
+{% block title %}Descuentos por volumen{% endblock %}
+{% block topbar_title %}📦 Descuentos por volumen{% endblock %}
+{% block topbar_actions %}
+  <button onclick="abrirModal()" class="btn btn-accent btn-sm">＋ Nuevo escalón</button>
+{% endblock %}
+
+{% block head %}
+<style>
+.dv-table { width:100%; border-collapse:collapse; font-size:.85rem; }
+.dv-table thead th {
+  background:#f1f5f9; color:#475569; padding:.6rem .8rem;
+  font-size:.74rem; font-weight:700; text-transform:uppercase;
+  border-bottom:2px solid #e2e8f0; text-align:left; white-space:nowrap;
+}
+.dv-table tbody tr { border-bottom:1px solid #f0f0f0; transition:background .1s; }
+.dv-table tbody tr:hover { background:#fafbfc; }
+.dv-table td { padding:.55rem .8rem; vertical-align:middle; }
+.dv-table .prod-group td { background:#f8fafc; font-weight:700; font-size:.78rem;
+  color:#475569; border-top:2px solid #e2e8f0; }
+
+.pct-badge {
+  font-size:.75rem; font-weight:700; padding:3px 10px; border-radius:20px;
+  background:#dbeafe; color:#1d4ed8; display:inline-block;
+}
+
+/* Modal */
+.modal-bg { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45);
+  z-index:100; align-items:center; justify-content:center; }
+.modal-bg.open { display:flex; }
+.modal { background:#fff; border-radius:14px; padding:2rem; width:100%;
+  max-width:460px; box-shadow:0 8px 40px rgba(0,0,0,.2); }
+.modal h2 { font-size:1.1rem; font-weight:700; margin-bottom:1.2rem; color:var(--dark); }
+.mf { display:flex; flex-direction:column; gap:.3rem; margin-bottom:.9rem; }
+.mf label { font-size:.78rem; font-weight:600; color:var(--dark); }
+.mf input, .mf select { padding:8px 10px; border:1.5px solid #d1d5db; border-radius:7px;
+  font-size:.88rem; font-family:inherit; outline:none; }
+.mf input:focus, .mf select:focus { border-color:var(--primary); }
+.precio-hint { font-size:.75rem; color:#6b7280; margin-top:.4rem;
+  background:#f1f5f9; border-radius:6px; padding:.5rem .7rem; }
+.modal-footer { display:flex; gap:.7rem; justify-content:flex-end;
+  margin-top:1.2rem; border-top:1px solid #f0f0f0; padding-top:1rem; }
+
+/* Info box */
+.info-box { background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px;
+  padding:1rem 1.2rem; margin-bottom:1.2rem; font-size:.85rem; color:#1e40af; }
+.info-box strong { font-size:.9rem; display:block; margin-bottom:.3rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="info-box">
+  <strong>💡 ¿Cómo funciona?</strong>
+  Defina escalones de descuento por cantidad para un producto. Cuando un cliente agregue esa
+  cantidad o más al carrito, el precio se ajusta automáticamente. Ejemplo: 3+ unidades → 5% off,
+  5+ unidades → 10% off, 10+ unidades → 15% off.
+</div>
+
+<div class="card" style="padding:0;overflow:auto">
+  <table class="dv-table">
+    <thead>
+      <tr>
+        <th>Producto</th>
+        <th>Desde (unidades)</th>
+        <th>Descuento</th>
+        <th>Precio resultante (sin IVA)</th>
+        <th>Estado</th>
+        <th style="width:90px"></th>
+      </tr>
+    </thead>
+    <tbody>
+    {% set ultimo_prod = namespace(id=0) %}
+    {% for d in descuentos %}
+      {% if d.producto_id != ultimo_prod.id %}
+        {% set ultimo_prod.id = d.producto_id %}
+        <tr class="prod-group">
+          <td colspan="6">📦 {{ d.producto_nombre }} <span style="font-family:monospace;font-weight:400;color:#9ca3af">({{ d.producto_codigo }})</span>
+            — Precio normal: <span style="color:var(--primary)">₡{{ "{:,.0f}".format((d.precio_ref or 0) | float) }}</span>
+          </td>
+        </tr>
+      {% endif %}
+      <tr id="row-{{ d.id }}">
+        <td style="padding-left:2rem;color:#6b7280;font-size:.8rem">↳ Escalón</td>
+        <td>
+          <strong>{{ d.cantidad_min }}+</strong>
+          <span style="font-size:.75rem;color:#9ca3af"> unidades</span>
+        </td>
+        <td>
+          <span class="pct-badge">-{{ d.descuento_pct | int }}%</span>
+        </td>
+        <td style="font-weight:600;color:var(--primary)">
+          {% if d.precio_ref %}
+          ₡{{ "{:,.0f}".format((d.precio_ref | float) * (1 - d.descuento_pct | float / 100)) }}
+          <span style="font-size:.72rem;font-weight:400;color:#9ca3af">
+            (ahorro ₡{{ "{:,.0f}".format((d.precio_ref | float) * (d.descuento_pct | float / 100)) }})
+          </span>
+          {% else %}—{% endif %}
+        </td>
+        <td>
+          {% if d.activo %}
+          <span class="badge badge-green">Activo</span>
+          {% else %}
+          <span class="badge badge-gray">Inactivo</span>
+          {% endif %}
+        </td>
+        <td>
+          <div style="display:flex;gap:.3rem">
+            <button onclick="editar({{ d.id }},{{ d.producto_id }},'{{ d.cantidad_min }}','{{ d.descuento_pct }}',{{ 'true' if d.activo else 'false' }})"
+                    class="btn btn-ghost btn-sm" title="Editar">✏️</button>
+            <button onclick="eliminar({{ d.id }})" class="btn btn-danger btn-sm" title="Eliminar">🗑</button>
+          </div>
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="6" style="text-align:center;padding:3rem;color:#9ca3af">
+        No hay escalones de descuento. Cree el primero con "＋ Nuevo escalón".
+      </td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Modal -->
+<div class="modal-bg" id="modalBg" onclick="if(event.target.id==='modalBg')cerrarModal()">
+  <div class="modal">
+    <h2 id="modalTitulo">➕ Nuevo escalón de descuento</h2>
+    <input type="hidden" id="f-id">
+
+    <div class="mf">
+      <label>Producto *</label>
+      <select id="f-producto" onchange="actualizarHint()">
+        <option value="">— Seleccione un producto —</option>
+        {% for p in productos %}
+        <option value="{{ p.id }}" data-precio="{{ p.precio_ref or 0 }}">
+          {{ p.nombre }} (₡{{ "{:,.0f}".format((p.precio_ref or 0) | float) }})
+        </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.8rem">
+      <div class="mf">
+        <label>Desde (unidades) *</label>
+        <input type="number" id="f-cantidad" min="2" step="1" placeholder="Ej: 3"
+               oninput="actualizarHint()">
+      </div>
+      <div class="mf">
+        <label>Descuento % *</label>
+        <input type="number" id="f-pct" min="1" max="80" step="0.5" placeholder="Ej: 10"
+               oninput="actualizarHint()">
+      </div>
+    </div>
+
+    <div class="precio-hint" id="precio-hint" style="display:none"></div>
+
+    <div class="mf">
+      <label>Estado</label>
+      <select id="f-activo">
+        <option value="true">✅ Activo</option>
+        <option value="false">❌ Inactivo</option>
+      </select>
+    </div>
+
+    <div class="modal-footer">
+      <button onclick="cerrarModal()" class="btn btn-ghost btn-sm">Cancelar</button>
+      <button onclick="guardar()" class="btn btn-primary btn-sm" id="btnGuardar">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function abrirModal() {
+  document.getElementById('modalTitulo').textContent = '➕ Nuevo escalón de descuento';
+  document.getElementById('f-id').value       = '';
+  document.getElementById('f-producto').value = '';
+  document.getElementById('f-cantidad').value = '';
+  document.getElementById('f-pct').value      = '';
+  document.getElementById('f-activo').value   = 'true';
+  document.getElementById('precio-hint').style.display = 'none';
+  document.getElementById('modalBg').classList.add('open');
+}
+
+function editar(id, prodId, cant, pct, activo) {
+  document.getElementById('modalTitulo').textContent = '✏️ Editar escalón';
+  document.getElementById('f-id').value       = id;
+  document.getElementById('f-producto').value = prodId;
+  document.getElementById('f-cantidad').value = cant;
+  document.getElementById('f-pct').value      = pct;
+  document.getElementById('f-activo').value   = activo ? 'true' : 'false';
+  actualizarHint();
+  document.getElementById('modalBg').classList.add('open');
+}
+
+function cerrarModal() { document.getElementById('modalBg').classList.remove('open'); }
+
+function actualizarHint() {
+  const sel   = document.getElementById('f-producto');
+  const opt   = sel.options[sel.selectedIndex];
+  const base  = parseFloat(opt?.dataset?.precio || 0);
+  const pct   = parseFloat(document.getElementById('f-pct').value || 0);
+  const cant  = parseInt(document.getElementById('f-cantidad').value || 0);
+  const hint  = document.getElementById('precio-hint');
+  if (base > 0 && pct > 0 && cant > 0) {
+    const resultante = base * (1 - pct / 100);
+    const ahorro     = base - resultante;
+    hint.style.display = 'block';
+    hint.innerHTML = `
+      <strong>Vista previa del escalón:</strong><br>
+      Comprando <strong>${cant}+</strong> unidades → precio unitario:
+      <strong style="color:var(--primary)">₡${Math.round(resultante).toLocaleString('es-CR')}</strong>
+      <span style="color:#9ca3af;text-decoration:line-through;margin-left:.4rem">₡${Math.round(base).toLocaleString('es-CR')}</span><br>
+      Ahorro por unidad: <strong style="color:#16a34a">₡${Math.round(ahorro).toLocaleString('es-CR')}</strong>
+      · Por ${cant} unidades: <strong style="color:#16a34a">₡${Math.round(ahorro*cant).toLocaleString('es-CR')}</strong>
+    `;
+  } else {
+    hint.style.display = 'none';
+  }
+}
+
+async function guardar() {
+  const id      = document.getElementById('f-id').value;
+  const prodId  = document.getElementById('f-producto').value;
+  const cant    = parseInt(document.getElementById('f-cantidad').value);
+  const pct     = parseFloat(document.getElementById('f-pct').value);
+  const activo  = document.getElementById('f-activo').value === 'true';
+
+  if (!prodId)    { alert('Seleccione un producto.'); return; }
+  if (!cant || cant < 2) { alert('La cantidad mínima debe ser 2 o más.'); return; }
+  if (!pct || pct <= 0)  { alert('Ingrese un porcentaje de descuento válido.'); return; }
+
+  const btn = document.getElementById('btnGuardar');
+  btn.disabled = true; btn.textContent = '⏳ Guardando…';
+  try {
+    const url    = id ? `/admin/descuentos-volumen/${id}` : '/admin/descuentos-volumen';
+    const method = id ? 'PUT' : 'POST';
+    const r = await fetch(url, {
+      method, headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ producto_id: parseInt(prodId), cantidad_min: cant,
+                             descuento_pct: pct, activo })
+    });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    cerrarModal();
+    location.reload();
+  } catch(e) {
+    alert('Error: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '💾 Guardar';
+  }
+}
+
+async function eliminar(id) {
+  if (!confirm('¿Eliminar este escalón de descuento?')) return;
+  const r = await fetch(`/admin/descuentos-volumen/${id}`, { method: 'DELETE' });
+  if (r.ok) { document.getElementById(`row-${id}`).remove(); }
+}
+</script>
+{% endblock %}

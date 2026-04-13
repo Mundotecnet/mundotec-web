@@ -72,14 +72,33 @@
     {% endif %}
 
     <h1>{{ producto.nombre }}</h1>
-    {% if producto.precio_ref and producto.precio_ref > 0 %}
-    {% set precio_iva = (producto.precio_ref | float) * 1.13 %}
-    <div style="margin-bottom:1rem;padding:1rem;background:#eff6ff;border-radius:10px;border:1px solid #bfdbfe">
-      <div style="font-size:1.8rem;font-weight:800;color:var(--primary)">₡{{ "{:,.0f}".format(precio_iva) }}</div>
+    {% set precio_base = producto.precio_efectivo or producto.precio_ref %}
+    {% if precio_base and precio_base > 0 %}
+    {% set precio_iva = (precio_base | float) * 1.13 %}
+    <div style="margin-bottom:1rem;padding:1rem;background:{% if producto.oferta_id %}#fff5f5{% else %}#eff6ff{% endif %};border-radius:10px;border:1px solid {% if producto.oferta_id %}#fecaca{% else %}#bfdbfe{% endif %}">
+      {% if producto.oferta_id %}
+      <div style="margin-bottom:.4rem">
+        <span style="background:#ef4444;color:#fff;font-size:.72rem;font-weight:700;padding:3px 10px;border-radius:20px">
+          {{ producto.oferta_etiqueta or 'OFERTA' }}{% if producto.descuento_pct %} — {{ producto.descuento_pct | int }}% OFF{% endif %}
+        </span>
+      </div>
+      {% endif %}
+      <div style="font-size:1.8rem;font-weight:800;color:{% if producto.oferta_id %}#dc2626{% else %}var(--primary){% endif %}">₡{{ "{:,.0f}".format(precio_iva) }}</div>
       <div style="font-size:.8rem;color:#6b7280;margin-top:.2rem">
         Precio de referencia con IVA (13%) incluido
-        <span style="margin-left:.8rem">· Sin IVA: ₡{{ "{:,.0f}".format(producto.precio_ref | float) }}</span>
+        {% if producto.oferta_id and producto.precio_ref %}
+        <span style="margin-left:.8rem;text-decoration:line-through">₡{{ "{:,.0f}".format((producto.precio_ref | float) * 1.13) }}</span>
+        <span style="margin-left:.4rem;color:#dc2626;font-weight:600">antes</span>
+        {% else %}
+        <span style="margin-left:.8rem">· Sin IVA: ₡{{ "{:,.0f}".format(precio_base | float) }}</span>
+        {% endif %}
       </div>
+      {% if producto.oferta_fin %}
+      <div style="font-size:.75rem;color:#9ca3af;margin-top:.4rem" id="countdown-wrap">
+        ⏱ Oferta válida hasta: <strong>{{ producto.oferta_fin[:16].replace('T',' ') }}</strong>
+        — <span id="countdown" style="color:#dc2626;font-weight:700"></span>
+      </div>
+      {% endif %}
     </div>
     {% endif %}
     <p style="font-size:.8rem;color:var(--gray);margin-bottom:1.5rem">Código: <strong>{{ producto.codigo }}</strong></p>
@@ -88,6 +107,44 @@
       <div class="prod-desc">{{ producto.descripcion_web }}</div>
     {% elif producto.descripcion_syma %}
       <div class="prod-desc">{{ producto.descripcion_syma }}</div>
+    {% endif %}
+
+    <!-- Descuentos por volumen -->
+    {% if producto.vol_descuentos %}
+    <div style="margin-bottom:1.5rem;border:1.5px solid #bfdbfe;border-radius:10px;overflow:hidden">
+      <div style="background:#eff6ff;padding:.6rem 1rem;font-size:.85rem;font-weight:700;color:#1e40af">
+        📦 Precios por volumen
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:.83rem">
+        <thead>
+          <tr style="background:#f8fafc">
+            <th style="padding:.5rem .9rem;text-align:left;color:#475569;font-size:.75rem;font-weight:700">Cantidad</th>
+            <th style="padding:.5rem .9rem;text-align:right;color:#475569;font-size:.75rem;font-weight:700">Descuento</th>
+            <th style="padding:.5rem .9rem;text-align:right;color:#475569;font-size:.75rem;font-weight:700">Precio c/u (sin IVA)</th>
+            <th style="padding:.5rem .9rem;text-align:right;color:#475569;font-size:.75rem;font-weight:700">Precio c/u (con IVA)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-top:1px solid #e5e7eb">
+            <td style="padding:.45rem .9rem">1 unidad</td>
+            <td style="padding:.45rem .9rem;text-align:right;color:#6b7280">—</td>
+            <td style="padding:.45rem .9rem;text-align:right">₡{{ "{:,.0f}".format(precio_base | float) }}</td>
+            <td style="padding:.45rem .9rem;text-align:right;font-weight:600">₡{{ "{:,.0f}".format((precio_base | float) * 1.13) }}</td>
+          </tr>
+          {% for v in producto.vol_descuentos %}
+          {% set p_desc = (precio_base | float) * (1 - v.descuento_pct | float / 100) %}
+          <tr style="border-top:1px solid #e5e7eb;background:{% if loop.index is odd %}#f0f9ff{% else %}#fff{% endif %}">
+            <td style="padding:.45rem .9rem;font-weight:600">{{ v.cantidad_min }}+ unidades</td>
+            <td style="padding:.45rem .9rem;text-align:right">
+              <span style="background:#dcfce7;color:#166534;font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:12px">-{{ v.descuento_pct | int }}%</span>
+            </td>
+            <td style="padding:.45rem .9rem;text-align:right;color:var(--primary);font-weight:600">₡{{ "{:,.0f}".format(p_desc) }}</td>
+            <td style="padding:.45rem .9rem;text-align:right;font-weight:700;color:var(--primary)">₡{{ "{:,.0f}".format(p_desc * 1.13) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
     {% endif %}
 
     <!-- Especificaciones -->
@@ -106,7 +163,7 @@
     {% endif %}
 
     <div class="acciones">
-      <button onclick="agregarAlCarrito({{ producto.id }},'{{ producto.codigo }}','{{ producto.nombre | replace("'","\\'")|replace('"','\\"') }}',{{ producto.precio_ref or 0 }},'{{ (producto.imagenes[0].url_path if producto.imagenes else '') }}')"
+      <button onclick="agregarAlCarrito({{ producto.id }},'{{ producto.codigo }}','{{ producto.nombre | replace("'","\\'")|replace('"','\\"') }}',{{ precio_base or 0 }},'{{ (producto.imagenes[0].url_path if producto.imagenes else '') }}')"
               class="btn btn-primary" style="font-size:1rem;padding:14px 28px">
         🛒 Agregar al carrito
       </button>
@@ -134,5 +191,24 @@ function cambiarImg(thumb, src) {
   document.querySelectorAll('.thumb').forEach(t => t.classList.remove('activo'));
   thumb.classList.add('activo');
 }
+
+{% if producto.oferta_fin %}
+(function() {
+  const fin = new Date("{{ producto.oferta_fin[:19].replace('T',' ') }}");
+  function actualizar() {
+    const diff = fin - new Date();
+    if (diff <= 0) { document.getElementById('countdown').textContent = 'Expirada'; return; }
+    const d = Math.floor(diff / 86400000);
+    const h = Math.floor((diff % 86400000) / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    document.getElementById('countdown').textContent =
+      (d > 0 ? d + 'd ' : '') + String(h).padStart(2,'0') + 'h ' +
+      String(m).padStart(2,'0') + 'm ' + String(s).padStart(2,'0') + 's';
+  }
+  actualizar();
+  setInterval(actualizar, 1000);
+})();
+{% endif %}
 </script>
 {% endblock %}

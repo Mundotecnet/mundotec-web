@@ -1,0 +1,280 @@
+{% extends "admin/base.html" %}
+{% block title %}Ofertas{% endblock %}
+{% block topbar_title %}🏷️ Gestión de Ofertas{% endblock %}
+{% block topbar_actions %}
+  <a href="/ofertas" target="_blank" class="btn btn-ghost btn-sm">🌐 Ver en sitio</a>
+  <button onclick="abrirModal()" class="btn btn-accent btn-sm">＋ Nueva oferta</button>
+{% endblock %}
+
+{% block head %}
+<style>
+.of-table { width:100%; border-collapse:collapse; font-size:.85rem; }
+.of-table thead th {
+  background:#f1f5f9; color:#475569; padding:.6rem .8rem;
+  font-size:.74rem; font-weight:700; text-transform:uppercase;
+  border-bottom:2px solid #e2e8f0; text-align:left; white-space:nowrap;
+}
+.of-table tbody tr { border-bottom:1px solid #f0f0f0; transition:background .1s; }
+.of-table tbody tr:hover { background:#fafbfc; }
+.of-table td { padding:.55rem .8rem; vertical-align:middle; }
+
+.estado-badge {
+  font-size:.68rem; font-weight:700; padding:2px 9px; border-radius:20px;
+  display:inline-block;
+}
+.est-activa   { background:#dcfce7; color:#166534; }
+.est-futura   { background:#dbeafe; color:#1d4ed8; }
+.est-vencida  { background:#f3f4f6; color:#6b7280; }
+.est-inactiva { background:#fee2e2; color:#991b1b; }
+
+/* Modal */
+.modal-bg {
+  display:none; position:fixed; inset:0; background:rgba(0,0,0,.45);
+  z-index:100; align-items:center; justify-content:center;
+}
+.modal-bg.open { display:flex; }
+.modal {
+  background:#fff; border-radius:14px; padding:2rem;
+  width:100%; max-width:520px; max-height:90vh; overflow-y:auto;
+  box-shadow:0 8px 40px rgba(0,0,0,.2);
+}
+.modal h2 { font-size:1.1rem; font-weight:700; margin-bottom:1.2rem; color:var(--dark); }
+.modal-grid { display:grid; grid-template-columns:1fr 1fr; gap:.8rem; }
+.modal-grid .full { grid-column:1/-1; }
+.mf { display:flex; flex-direction:column; gap:.3rem; }
+.mf label { font-size:.78rem; font-weight:600; color:var(--dark); }
+.mf input, .mf select {
+  padding:8px 10px; border:1.5px solid #d1d5db; border-radius:7px;
+  font-size:.88rem; font-family:inherit; outline:none;
+}
+.mf input:focus, .mf select:focus { border-color:var(--primary); }
+
+.pct-hint { font-size:.72rem; color:#9ca3af; margin-top:.2rem; }
+.modal-footer { display:flex; gap:.7rem; justify-content:flex-end; margin-top:1.4rem; border-top:1px solid #f0f0f0; padding-top:1rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Tabla de ofertas -->
+<div class="card" style="padding:0;overflow:auto">
+  <table class="of-table">
+    <thead>
+      <tr>
+        <th>Producto</th>
+        <th>Precio oferta</th>
+        <th>Descuento</th>
+        <th>Etiqueta</th>
+        <th>Desde</th>
+        <th>Hasta</th>
+        <th>Estado</th>
+        <th style="width:90px"></th>
+      </tr>
+    </thead>
+    <tbody id="ofertasTbody">
+    {% for o in ofertas %}
+    <tr id="row-{{ o.id }}">
+      <td>
+        <div style="font-weight:600;font-size:.85rem">{{ o.producto_nombre }}</div>
+        <div style="font-size:.72rem;color:#9ca3af;font-family:monospace">{{ o.producto_codigo }}</div>
+        <div style="font-size:.72rem;color:#6b7280">Normal: ₡{{ "{:,.0f}".format((o.precio_ref or 0) | float) }}</div>
+      </td>
+      <td style="font-weight:700;color:#dc2626">₡{{ "{:,.0f}".format((o.precio_oferta or 0) | float) }}</td>
+      <td>
+        {% if o.descuento_pct %}
+        <span class="estado-badge" style="background:#fef9c3;color:#713f12">-{{ o.descuento_pct | int }}%</span>
+        {% else %}—{% endif %}
+      </td>
+      <td><span class="estado-badge" style="background:#fee2e2;color:#991b1b">{{ o.etiqueta }}</span></td>
+      <td style="font-size:.78rem">{{ o.fecha_inicio[:16].replace('T',' ') }}</td>
+      <td style="font-size:.78rem">{{ o.fecha_fin[:16].replace('T',' ') }}</td>
+      <td>
+        {% set ahora = namespace(val='') %}
+        {% if not o.activa %}
+          <span class="estado-badge est-inactiva">Inactiva</span>
+        {% elif o.fecha_fin < now_iso %}
+          <span class="estado-badge est-vencida">Vencida</span>
+        {% elif o.fecha_inicio > now_iso %}
+          <span class="estado-badge est-futura">Programada</span>
+        {% else %}
+          <span class="estado-badge est-activa">✅ Activa</span>
+        {% endif %}
+      </td>
+      <td>
+        <div style="display:flex;gap:.3rem">
+          <button onclick="editarOferta({{ o.id }},{{ o.producto_id }},'{{ o.precio_oferta }}','{{ o.descuento_pct or '' }}','{{ o.etiqueta }}','{{ o.fecha_inicio[:16] }}','{{ o.fecha_fin[:16] }}',{{ 'true' if o.activa else 'false' }})"
+                  class="btn btn-ghost btn-sm" title="Editar">✏️</button>
+          <button onclick="eliminar({{ o.id }})" class="btn btn-danger btn-sm" title="Eliminar">🗑</button>
+        </div>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="8" style="text-align:center;padding:3rem;color:#9ca3af">No hay ofertas aún. Cree la primera con el botón "Nueva oferta".</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Modal nueva/editar oferta -->
+<div class="modal-bg" id="modalBg" onclick="cerrarModalFuera(event)">
+  <div class="modal">
+    <h2 id="modalTitulo">➕ Nueva oferta</h2>
+    <input type="hidden" id="f-id" value="">
+
+    <div class="modal-grid">
+
+      <div class="fi full">
+        <label>Producto *</label>
+        <select id="f-producto" class="fi" style="padding:8px 10px;border:1.5px solid #d1d5db;border-radius:7px;font-size:.88rem" onchange="calcularPct()">
+          <option value="">— Seleccione un producto —</option>
+          {% for p in productos %}
+          <option value="{{ p.id }}" data-precio="{{ p.precio_ref or 0 }}">
+            {{ p.nombre }} (₡{{ "{:,.0f}".format((p.precio_ref or 0) | float) }})
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="mf">
+        <label>Precio oferta (sin IVA) *</label>
+        <input type="number" id="f-precio" min="0" step="1" placeholder="0"
+               oninput="calcularPct()">
+      </div>
+      <div class="mf">
+        <label>Descuento %</label>
+        <input type="number" id="f-pct" min="0" max="99" step="0.5" placeholder="Auto">
+        <span class="pct-hint" id="pct-hint"></span>
+      </div>
+
+      <div class="mf">
+        <label>Etiqueta del badge</label>
+        <input type="text" id="f-etiqueta" value="OFERTA" placeholder="OFERTA">
+      </div>
+      <div class="mf">
+        <label>Activa</label>
+        <select id="f-activa">
+          <option value="true">✅ Sí</option>
+          <option value="false">❌ No</option>
+        </select>
+      </div>
+
+      <div class="mf">
+        <label>Fecha inicio *</label>
+        <input type="datetime-local" id="f-inicio">
+      </div>
+      <div class="mf">
+        <label>Fecha fin *</label>
+        <input type="datetime-local" id="f-fin">
+      </div>
+
+    </div>
+
+    <div class="modal-footer">
+      <button onclick="cerrarModal()" class="btn btn-ghost btn-sm">Cancelar</button>
+      <button onclick="guardar()" class="btn btn-primary btn-sm" id="btnGuardar">💾 Guardar oferta</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Modal ─────────────────────────────────────────────────────────────────────
+function abrirModal() {
+  document.getElementById('modalTitulo').textContent = '➕ Nueva oferta';
+  document.getElementById('f-id').value      = '';
+  document.getElementById('f-producto').value = '';
+  document.getElementById('f-precio').value  = '';
+  document.getElementById('f-pct').value     = '';
+  document.getElementById('f-etiqueta').value= 'OFERTA';
+  document.getElementById('f-activa').value  = 'true';
+  document.getElementById('f-inicio').value  = fmtDatetimeLocal(new Date());
+  document.getElementById('f-fin').value     = fmtDatetimeLocal(new Date(Date.now() + 7*86400000));
+  document.getElementById('pct-hint').textContent = '';
+  document.getElementById('modalBg').classList.add('open');
+}
+
+function editarOferta(id, prodId, precio, pct, etiqueta, inicio, fin, activa) {
+  document.getElementById('modalTitulo').textContent = '✏️ Editar oferta';
+  document.getElementById('f-id').value       = id;
+  document.getElementById('f-producto').value = prodId;
+  document.getElementById('f-precio').value   = precio;
+  document.getElementById('f-pct').value      = pct;
+  document.getElementById('f-etiqueta').value = etiqueta;
+  document.getElementById('f-activa').value   = activa ? 'true' : 'false';
+  document.getElementById('f-inicio').value   = inicio;
+  document.getElementById('f-fin').value      = fin;
+  calcularPct();
+  document.getElementById('modalBg').classList.add('open');
+}
+
+function cerrarModal()          { document.getElementById('modalBg').classList.remove('open'); }
+function cerrarModalFuera(e)    { if (e.target.id === 'modalBg') cerrarModal(); }
+
+function fmtDatetimeLocal(d) {
+  return d.getFullYear() + '-' +
+    String(d.getMonth()+1).padStart(2,'0') + '-' +
+    String(d.getDate()).padStart(2,'0') + 'T' +
+    String(d.getHours()).padStart(2,'0') + ':' +
+    String(d.getMinutes()).padStart(2,'0');
+}
+
+// ── Calcular % automáticamente ────────────────────────────────────────────────
+function calcularPct() {
+  const sel   = document.getElementById('f-producto');
+  const opt   = sel.options[sel.selectedIndex];
+  const base  = parseFloat(opt?.dataset?.precio || 0);
+  const ofert = parseFloat(document.getElementById('f-precio').value || 0);
+  if (base > 0 && ofert > 0 && ofert < base) {
+    const pct = ((base - ofert) / base * 100).toFixed(1);
+    document.getElementById('f-pct').value       = pct;
+    document.getElementById('pct-hint').textContent = `Ahorro: ₡${(base-ofert).toLocaleString('es-CR')} (${pct}% menos)`;
+  } else {
+    document.getElementById('pct-hint').textContent = '';
+  }
+}
+
+// ── Guardar ───────────────────────────────────────────────────────────────────
+async function guardar() {
+  const id       = document.getElementById('f-id').value;
+  const prodId   = document.getElementById('f-producto').value;
+  const precio   = parseFloat(document.getElementById('f-precio').value);
+  const pct      = parseFloat(document.getElementById('f-pct').value) || null;
+  const etiqueta = document.getElementById('f-etiqueta').value.trim() || 'OFERTA';
+  const inicio   = document.getElementById('f-inicio').value;
+  const fin      = document.getElementById('f-fin').value;
+  const activa   = document.getElementById('f-activa').value === 'true';
+
+  if (!prodId) { alert('Seleccione un producto.'); return; }
+  if (!precio || precio <= 0) { alert('Ingrese un precio de oferta válido.'); return; }
+  if (!inicio || !fin) { alert('Complete las fechas.'); return; }
+  if (fin <= inicio) { alert('La fecha fin debe ser posterior a la fecha inicio.'); return; }
+
+  const body = { producto_id: parseInt(prodId), precio_oferta: precio,
+                 descuento_pct: pct, etiqueta, fecha_inicio: inicio, fecha_fin: fin, activa };
+  const btn = document.getElementById('btnGuardar');
+  btn.disabled = true; btn.textContent = '⏳ Guardando…';
+
+  try {
+    const url    = id ? `/admin/ofertas/${id}` : '/admin/ofertas';
+    const method = id ? 'PUT' : 'POST';
+    const r = await fetch(url, {
+      method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(body)
+    });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    cerrarModal();
+    location.reload();
+  } catch(e) {
+    alert('Error: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '💾 Guardar oferta';
+  }
+}
+
+// ── Eliminar ──────────────────────────────────────────────────────────────────
+async function eliminar(id) {
+  if (!confirm('¿Eliminar esta oferta?')) return;
+  const r = await fetch(`/admin/ofertas/${id}`, { method: 'DELETE' });
+  if (r.ok) document.getElementById(`row-${id}`).remove();
+}
+</script>
+{% endblock %}

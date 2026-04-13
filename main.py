@@ -28,8 +28,12 @@ from public.catalogo_pub import (get_catalogo_publico, get_producto_publico,
                                   get_cotizaciones, get_stats_cotizaciones,
                                   marcar_cotizacion_leida, get_cotizacion_by_id,
                                   registrar_pedido, get_pedidos, get_pedido_by_id,
-                                  actualizar_estado_pedido, set_link_pago,
-                                  get_stats_pedidos)
+                                  actualizar_estado_pedido, set_link_pago, get_stats_pedidos,
+                                  get_ofertas_vigentes, get_todas_las_ofertas,
+                                  crear_oferta, actualizar_oferta, eliminar_oferta,
+                                  get_todos_descuentos_volumen, crear_descuento_volumen,
+                                  actualizar_descuento_volumen, eliminar_descuento_volumen,
+                                  get_precio_volumen)
 from notificaciones import (enviar_notificacion_contacto, enviar_notificacion_cotizacion,
                              enviar_notificacion_pedido, enviar_link_pago)
 from pdf_cotizacion import generar_pdf_cotizacion
@@ -573,13 +577,20 @@ async def admin_aprobar_desc_post(request: Request):
     from db import execute
     execute("UPDATE catalogo_productos SET descripcion_web=%s, actualizado_en=NOW() WHERE id=%s",
             (desc, prod_id))
-    # Guardar características como specs si no tenía
+    # Guardar características como specs (siempre reemplaza)
     if chars:
-        existing = dbq("SELECT id FROM catalogo_specs WHERE producto_id=%s LIMIT 1", (prod_id,))
-        if not existing:
-            for i, c in enumerate(chars):
-                dbx("INSERT INTO catalogo_specs (producto_id, etiqueta, valor, orden) VALUES (%s,%s,%s,%s)",
-                    (prod_id, f"Característica {i+1}", c, i))
+        dbx("DELETE FROM catalogo_specs WHERE producto_id=%s", (prod_id,))
+        for i, c in enumerate(chars):
+            # Parsear formato "Etiqueta: Valor" si existe el ":"
+            if ':' in c:
+                partes = c.split(':', 1)
+                etiqueta = partes[0].strip()
+                valor    = partes[1].strip()
+            else:
+                etiqueta = "Especificación"
+                valor    = c.strip()
+            dbx("INSERT INTO catalogo_specs (producto_id, etiqueta, valor, orden) VALUES (%s,%s,%s,%s)",
+                (prod_id, etiqueta, valor, i))
     return JSONResponse({"ok": True})
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -644,6 +655,110 @@ async def admin_config_post(request: Request):
     cfg = get_config()
     return templates.TemplateResponse("admin/configuracion.html",
                                       {"request": request, "cfg": cfg, "guardado": True})
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OFERTAS — público
+# ─────────────────────────────────────────────────────────────────────────────
+@app.get("/ofertas", response_class=HTMLResponse)
+async def ofertas_publico(request: Request):
+    cfg     = get_config()
+    ofertas = get_ofertas_vigentes()
+    return templates.TemplateResponse("public/ofertas.html", {
+        "request": request, "cfg": cfg, "ofertas": ofertas, "pagina": "ofertas"
+    })
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OFERTAS — admin
+# ─────────────────────────────────────────────────────────────────────────────
+@app.get("/admin/ofertas", response_class=HTMLResponse)
+async def admin_ofertas_get(request: Request):
+    _require_admin(request)
+    from admin.catalogo import get_catalogo
+    from datetime import datetime
+    ofertas   = get_todas_las_ofertas()
+    productos = get_catalogo(busqueda="", categoria="")
+    return templates.TemplateResponse("admin/ofertas.html", {
+        "request": request, "ofertas": ofertas, "productos": productos,
+        "now_iso": datetime.now().isoformat()
+    })
+
+@app.post("/admin/ofertas")
+async def admin_ofertas_post(request: Request):
+    _require_admin(request)
+    data = await request.json()
+    try:
+        r = crear_oferta(
+            data["producto_id"], data["precio_oferta"],
+            data.get("descuento_pct"), data.get("etiqueta", "OFERTA"),
+            data["fecha_inicio"], data["fecha_fin"]
+        )
+        return JSONResponse({"ok": True, "id": r["id"] if r else None})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+
+@app.put("/admin/ofertas/{oid}")
+async def admin_ofertas_put(request: Request, oid: int):
+    _require_admin(request)
+    data = await request.json()
+    try:
+        actualizar_oferta(oid, data)
+        return JSONResponse({"ok": True})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+
+@app.delete("/admin/ofertas/{oid}")
+async def admin_ofertas_delete(request: Request, oid: int):
+    _require_admin(request)
+    eliminar_oferta(oid)
+    return JSONResponse({"ok": True})
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DESCUENTOS POR VOLUMEN — admin
+# ─────────────────────────────────────────────────────────────────────────────
+@app.get("/admin/descuentos-volumen", response_class=HTMLResponse)
+async def admin_dv_get(request: Request):
+    _require_admin(request)
+    from admin.catalogo import get_catalogo
+    descuentos = get_todos_descuentos_volumen()
+    productos  = get_catalogo(busqueda="", categoria="")
+    return templates.TemplateResponse("admin/descuentos_volumen.html", {
+        "request": request, "descuentos": descuentos, "productos": productos
+    })
+
+@app.post("/admin/descuentos-volumen")
+async def admin_dv_post(request: Request):
+    _require_admin(request)
+    data = await request.json()
+    try:
+        r = crear_descuento_volumen(data["producto_id"], data["cantidad_min"], data["descuento_pct"])
+        return JSONResponse({"ok": True, "id": r["id"] if r else None})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+
+@app.put("/admin/descuentos-volumen/{dv_id}")
+async def admin_dv_put(request: Request, dv_id: int):
+    _require_admin(request)
+    data = await request.json()
+    try:
+        actualizar_descuento_volumen(dv_id, data["cantidad_min"], data["descuento_pct"], data.get("activo", True))
+        return JSONResponse({"ok": True})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+
+@app.delete("/admin/descuentos-volumen/{dv_id}")
+async def admin_dv_delete(request: Request, dv_id: int):
+    _require_admin(request)
+    eliminar_descuento_volumen(dv_id)
+    return JSONResponse({"ok": True})
+
+# API pública: devuelve precio con descuento de volumen para JS del carrito
+@app.get("/api/precio-volumen/{producto_id}/{cantidad}")
+async def api_precio_volumen(producto_id: int, cantidad: int):
+    escalon = get_precio_volumen(producto_id, cantidad)
+    return JSONResponse({
+        "descuento_pct": float(escalon["descuento_pct"]) if escalon else 0,
+        "cantidad_min":  escalon["cantidad_min"] if escalon else 0,
+    })
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ARRANQUE
