@@ -38,3 +38,7 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 BASE_DIR          = os.path.dirname(__file__)
 UPLOAD_PRODUCTOS  = os.path.join(BASE_DIR, "static", "uploads", "productos")
 UPLOAD_PROYECTOS  = os.path.join(BASE_DIR, "static", "uploads", "proyectos")
+
+# ── Google OAuth ──────────────────────────────────────────────────────────────
+GOOGLE_CLIENT_ID     = 'GOOGLE_CLIENT_ID_PLACEHOLDER'
+GOOGLE_CLIENT_SECRET = 'GOOGLE_CLIENT_SECRET_PLACEHOLDER'
