@@ -12,13 +12,15 @@ def get_hero_productos() -> list:
         LIMIT 8
     """)
 
-def get_catalogo_publico(categoria="", busqueda="", destacado=False) -> list:
+def get_catalogo_publico(categoria="", subcategoria="", busqueda="", destacado=False) -> list:
     filtros = ["p.activo = TRUE"]
     params  = []
     if destacado:
         filtros.append("p.destacado = TRUE")
     if categoria:
         filtros.append("p.categoria ILIKE %s"); params.append(f"%{categoria}%")
+    if subcategoria:
+        filtros.append("p.subcategoria ILIKE %s"); params.append(f"%{subcategoria}%")
     if busqueda:
         filtros.append("(p.nombre ILIKE %s OR p.descripcion_web ILIKE %s)")
         params += [f"%{busqueda}%", f"%{busqueda}%"]
@@ -167,6 +169,21 @@ def get_categorias_publico() -> list:
         ORDER BY categoria
     """)
     return [r["categoria"] for r in rows]
+
+
+def get_subcategorias_publico() -> dict:
+    """Devuelve dict {categoria: [subcategoria, ...]} solo de productos activos."""
+    rows = query("""
+        SELECT DISTINCT categoria, subcategoria FROM catalogo_productos
+        WHERE activo=TRUE
+          AND categoria IS NOT NULL AND categoria <> ''
+          AND subcategoria IS NOT NULL AND subcategoria <> ''
+        ORDER BY categoria, subcategoria
+    """)
+    result = {}
+    for r in rows:
+        result.setdefault(r["categoria"], []).append(r["subcategoria"])
+    return result
 
 
 def registrar_contacto(nombre, email, telefono, empresa, mensaje,

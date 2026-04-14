@@ -112,6 +112,7 @@
       <th>Código</th>
       <th>Nombre</th>
       <th>Categoría</th>
+      <th>Subcategoría</th>
       <th>Precio ₡</th>
       <th>Orden</th>
       <th style="text-align:center">Activo</th>
@@ -165,6 +166,16 @@
           <button onclick="nuevaCategoria({{ p.id }})" title="Nueva categoría"
                   style="border:none;background:none;cursor:pointer;font-size:.9rem;padding:2px 4px;color:#6b7280">＋</button>
         </div>
+      </td>
+
+      <!-- Subcategoría -->
+      <td>
+        <input class="ie" type="text"
+               value="{{ p.subcategoria or '' }}"
+               placeholder="Subcategoría…"
+               data-field="subcategoria" data-id="{{ p.id }}"
+               style="min-width:130px"
+               onblur="guardarCampo(this)">
       </td>
 
       <!-- Precio -->
@@ -262,13 +273,14 @@ function leerFila(id) {
     return el.value;
   };
   return {
-    nombre:    get('nombre'),
-    categoria: get('categoria'),
-    precio_ref: get('precio_ref'),
-    orden:     get('orden'),
-    activo:    get('activo'),
-    destacado: get('destacado'),
-    en_hero:   get('en_hero'),
+    nombre:       get('nombre'),
+    categoria:    get('categoria'),
+    subcategoria: get('subcategoria'),
+    precio_ref:   get('precio_ref'),
+    orden:        get('orden'),
+    activo:       get('activo'),
+    destacado:    get('destacado'),
+    en_hero:      get('en_hero'),
   };
 }
 

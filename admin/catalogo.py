@@ -47,11 +47,12 @@ def crear_producto(codigo, nombre, descripcion_syma="", descripcion_web="",
 
 
 def actualizar_producto(prod_id: int, data: dict):
-    campos = ["nombre=%s","descripcion_web=%s","categoria=%s",
+    campos = ["nombre=%s","descripcion_web=%s","categoria=%s","subcategoria=%s",
               "activo=%s","destacado=%s","en_hero=%s","orden=%s","precio_ref=%s",
               "stock=%s","actualizado_en=NOW()"]
     params = [data.get("nombre"), data.get("descripcion_web",""),
-              data.get("categoria",""), data.get("activo", True),
+              data.get("categoria",""), data.get("subcategoria",""),
+              data.get("activo", True),
               data.get("destacado", False), data.get("en_hero", False),
               data.get("orden", 0),
               data.get("precio_ref"), int(data.get("stock") or 0), prod_id]
@@ -129,6 +130,20 @@ def get_categorias() -> list:
     rows = query("SELECT DISTINCT categoria FROM catalogo_productos "
                  "WHERE categoria IS NOT NULL AND categoria <> '' ORDER BY categoria")
     return [r["categoria"] for r in rows]
+
+
+def get_subcategorias() -> dict:
+    """Devuelve dict {categoria: [subcategoria, ...]} con subcategorías no vacías."""
+    rows = query("""
+        SELECT DISTINCT categoria, subcategoria FROM catalogo_productos
+        WHERE categoria IS NOT NULL AND categoria <> ''
+          AND subcategoria IS NOT NULL AND subcategoria <> ''
+        ORDER BY categoria, subcategoria
+    """)
+    result = {}
+    for r in rows:
+        result.setdefault(r["categoria"], []).append(r["subcategoria"])
+    return result
 
 
 # ── Importar desde SYMA ───────────────────────────────────────────────────────

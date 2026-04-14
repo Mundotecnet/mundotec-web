@@ -25,7 +25,7 @@ from auth.google_auth import oauth, upsert_cliente, get_cliente_session
 from admin.config_site import (get_config, set_config_bulk, get_contactos,
                                 marcar_leido, get_stats_contacto)
 from public.catalogo_pub import (get_catalogo_publico, get_producto_publico,
-                                  get_categorias_publico, registrar_contacto,
+                                  get_categorias_publico, get_subcategorias_publico, registrar_contacto,
                                   get_hero_productos, get_proyectos_publico, registrar_cotizacion,
                                   get_cotizaciones, get_stats_cotizaciones,
                                   marcar_cotizacion_leida, get_cotizacion_by_id,
@@ -104,15 +104,17 @@ async def home(request: Request):
 
 @app.get("/catalogo", response_class=HTMLResponse)
 async def catalogo_pub(request: Request,
-                       categoria: str = Query(""),
-                       busqueda:  str = Query("")):
+                       categoria:    str = Query(""),
+                       subcategoria: str = Query(""),
+                       busqueda:     str = Query("")):
     cfg       = get_config()
-    productos = get_catalogo_publico(categoria=categoria, busqueda=busqueda)
+    productos = get_catalogo_publico(categoria=categoria, subcategoria=subcategoria, busqueda=busqueda)
     cats      = get_categorias_publico()
+    subcats   = get_subcategorias_publico()
     return templates.TemplateResponse("public/catalogo.html", {
         "request": request, "cfg": cfg,
-        "productos": productos, "categorias": cats,
-        "categoria_sel": categoria, "busqueda": busqueda,
+        "productos": productos, "categorias": cats, "subcategorias": subcats,
+        "categoria_sel": categoria, "subcategoria_sel": subcategoria, "busqueda": busqueda,
         "pagina": "catalogo"
     })
 
@@ -166,8 +168,8 @@ async def contacto_post(request: Request,
 
 # ── API pública (para JS si se necesita) ─────────────────────────────────────
 @app.get("/api/catalogo")
-async def api_catalogo(categoria: str = Query(""), busqueda: str = Query("")):
-    return get_catalogo_publico(categoria=categoria, busqueda=busqueda)
+async def api_catalogo(categoria: str = Query(""), subcategoria: str = Query(""), busqueda: str = Query("")):
+    return get_catalogo_publico(categoria=categoria, subcategoria=subcategoria, busqueda=busqueda)
 
 @app.get("/api/catalogo/{prod_id}")
 async def api_producto(prod_id: int):
@@ -268,8 +270,9 @@ async def carrito_pedido(request: Request):
 async def login_page(request: Request, next: str = "/carrito"):
     if get_cliente_session(request):
         return RedirectResponse(next, 302)
+    cfg = get_config()
     return templates.TemplateResponse("public/login.html", {
-        "request": request, "next": next
+        "request": request, "next": next, "cfg": cfg
     })
 
 @app.get("/auth/google")
@@ -309,6 +312,7 @@ async def mi_cuenta(request: Request):
     cliente = get_cliente_session(request)
     if not cliente:
         return RedirectResponse("/login?next=/mi-cuenta", 302)
+    cfg = get_config()
     import json
     pedidos_raw = dbq(
         "SELECT * FROM pedidos WHERE cliente_id=%s ORDER BY creado_en DESC",
@@ -320,7 +324,7 @@ async def mi_cuenta(request: Request):
         except Exception:
             p["items_parsed"] = []
     return templates.TemplateResponse("public/mi_cuenta.html", {
-        "request": request, "cliente": cliente, "pedidos": pedidos_raw
+        "request": request, "cliente": cliente, "pedidos": pedidos_raw, "cfg": cfg
     })
 
 # ─────────────────────────────────────────────────────────────────────────────
