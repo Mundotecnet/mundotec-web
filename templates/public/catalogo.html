@@ -38,22 +38,11 @@
 
 .chips { display:flex; gap:.6rem; flex-wrap:wrap; padding:.8rem 5%; background:#f8fafc; border-bottom:1px solid #e5e7eb; align-items:center; }
 .chip { display:inline-flex; align-items:center; gap:.4rem; padding:5px 14px; border-radius:20px; font-size:.8rem; font-weight:500; border:1px solid #d1d5db; background:#fff; cursor:pointer; transition:.15s; text-decoration:none; color:inherit; }
-.chip:hover, .chip.activo { background:var(--primary); color:#fff; border-color:var(--primary); }
-.chip-group { position:relative; display:inline-block; }
-.chip-group .chip { padding-right:10px; }
-.chip-group .chip.activo-cat { background:var(--primary); color:#fff; border-color:var(--primary); }
-.chip-arrow { font-size:.65rem; margin-left:2px; }
-.subcats-dropdown {
-  display:none; position:absolute; top:calc(100% + 6px); left:0;
-  background:#fff; border:1px solid #d1d5db; border-radius:10px;
-  box-shadow:0 8px 24px rgba(0,0,0,.12); z-index:100; min-width:180px; padding:6px 0;
-}
-.chip-group:hover .subcats-dropdown { display:block; }
-.subcats-dropdown a {
-  display:block; padding:7px 16px; font-size:.82rem; color:var(--dark);
-  text-decoration:none; white-space:nowrap;
-}
-.subcats-dropdown a:hover, .subcats-dropdown a.activo { background:#eff6ff; color:var(--primary); font-weight:600; }
+.chip:hover { background:#f3f4f6; border-color:#9ca3af; }
+.chip.activo { background:var(--primary); color:#fff; border-color:var(--primary); }
+.chip.back { background:#fff; color:var(--gray); border-color:#d1d5db; font-size:.78rem; }
+.chip.back:hover { background:#f3f4f6; }
+.chip-sep { width:1px; height:22px; background:#d1d5db; margin:0 4px; }
 </style>
 {% endblock %}
 
@@ -76,7 +65,7 @@
       {% endfor %}
     </select>
     <button type="submit">Buscar</button>
-    {% if busqueda or categoria_sel %}
+    {% if busqueda or categoria_sel or subcategoria_sel %}
     <a href="/catalogo" style="color:var(--gray);font-size:.85rem;padding:8px">✕ Limpiar</a>
     {% endif %}
   </form>
@@ -85,34 +74,30 @@
 <!-- Chips de categorías y subcategorías -->
 {% if categorias %}
 <div class="chips">
-  <a href="/catalogo" class="chip {{ 'activo' if not categoria_sel and not subcategoria_sel }}">Todos</a>
-  {% for c in categorias %}
-    {% if subcategorias.get(c) %}
-    <div class="chip-group">
-      <a href="/catalogo?categoria={{ c }}"
-         class="chip {% if c == categoria_sel %}activo-cat{% endif %}">
-        {{ c }} <span class="chip-arrow">▾</span>
-      </a>
-      <div class="subcats-dropdown">
-        <a href="/catalogo?categoria={{ c }}"
-           class="{{ 'activo' if c == categoria_sel and not subcategoria_sel }}">
-          Todos los {{ c }}
-        </a>
-        {% for s in subcategorias[c] %}
-        <a href="/catalogo?categoria={{ c }}&subcategoria={{ s }}"
-           class="{{ 'activo' if s == subcategoria_sel }}">
-          {{ s }}
-        </a>
-        {% endfor %}
-      </div>
-    </div>
-    {% else %}
-    <a href="/catalogo?categoria={{ c }}"
-       class="chip {{ 'activo' if c == categoria_sel and not subcategoria_sel }}">
-      {{ c }}
+  {% if not categoria_sel %}
+    {{/* Sin filtro: mostrar todas las categorías */}}
+    <a href="/catalogo" class="chip activo">Todos</a>
+    {% for c in categorias %}
+      <a href="/catalogo?categoria={{ c }}" class="chip">{{ c }}</a>
+    {% endfor %}
+  {% else %}
+    {{/* Con categoría seleccionada: mostrar subcategorías de esa categoría */}}
+    <a href="/catalogo" class="chip back">← Todas</a>
+    <div class="chip-sep"></div>
+    <a href="/catalogo?categoria={{ categoria_sel }}"
+       class="chip {{ 'activo' if not subcategoria_sel }}">
+      {{ categoria_sel }}
     </a>
+    {% if subcategorias.get(categoria_sel) %}
+      <div class="chip-sep"></div>
+      {% for s in subcategorias[categoria_sel] %}
+      <a href="/catalogo?categoria={{ categoria_sel }}&subcategoria={{ s }}"
+         class="chip {{ 'activo' if s == subcategoria_sel }}">
+        {{ s }}
+      </a>
+      {% endfor %}
     {% endif %}
-  {% endfor %}
+  {% endif %}
 </div>
 {% endif %}
 
