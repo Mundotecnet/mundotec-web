@@ -75,13 +75,11 @@
 {% if categorias %}
 <div class="chips">
   {% if not categoria_sel %}
-    {{/* Sin filtro: mostrar todas las categorías */}}
     <a href="/catalogo" class="chip activo">Todos</a>
     {% for c in categorias %}
       <a href="/catalogo?categoria={{ c }}" class="chip">{{ c }}</a>
     {% endfor %}
   {% else %}
-    {{/* Con categoría seleccionada: mostrar subcategorías de esa categoría */}}
     <a href="/catalogo" class="chip back">← Todas</a>
     <div class="chip-sep"></div>
     <a href="/catalogo?categoria={{ categoria_sel }}"
