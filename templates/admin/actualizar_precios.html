@@ -1,6 +1,6 @@
 {% extends "admin/base.html" %}
-{% block title %}Actualizar Precios{% endblock %}
-{% block topbar_title %}💰 Actualizar Precios desde SYMA{% endblock %}
+{% block title %}Actualizar Precios y Stock{% endblock %}
+{% block topbar_title %}💰 Actualizar Precios y Stock desde SYMA{% endblock %}
 {% block topbar_actions %}
   <a href="/admin/catalogo" class="btn btn-ghost btn-sm">← Volver al catálogo</a>
 {% endblock %}
@@ -23,8 +23,13 @@
 .res-table tr:hover td { background:#fafafa; }
 .check-col { width:40px; text-align:center; }
 .precio-col { text-align:right; font-variant-numeric:tabular-nums; }
+.stock-col  { text-align:right; font-variant-numeric:tabular-nums; }
 .dif-pos { color:#dc2626; font-weight:700; }
 .dif-neg { color:#15803d; font-weight:700; }
+.diff-highlight { background:#fffbeb; }
+.badge-diff { display:inline-block; font-size:.7rem; font-weight:700; padding:1px 6px; border-radius:8px; margin-left:4px; }
+.badge-p { background:#fef3c7; color:#92400e; }
+.badge-s { background:#ede9fe; color:#5b21b6; }
 .spinner { display:none; }
 </style>
 {% endblock %}
@@ -35,13 +40,16 @@
 {% elif not cambios %}
   <div class="card" style="text-align:center;padding:4rem;color:#9ca3af">
     <p style="font-size:2.5rem;margin-bottom:.5rem">✅</p>
-    <p style="font-size:1rem;font-weight:600;color:#374151">Todos los precios están al día</p>
+    <p style="font-size:1rem;font-weight:600;color:#374151">Precios y stock al día</p>
     <p style="font-size:.85rem;margin-top:.5rem">No se encontraron diferencias entre el catálogo web y SYMA.</p>
   </div>
 {% else %}
 
 <div class="info-banner">
-  ℹ️ <span>Se encontraron <strong>{{ cambios|length }}</strong> producto(s) con precio diferente en SYMA. Seleccione los que desea actualizar y confirme.</span>
+  ℹ️ <span>Se encontraron <strong>{{ cambios|length }}</strong> producto(s) con diferencias en SYMA.
+  <span class="badge-diff badge-p">P</span> precio distinto &nbsp;
+  <span class="badge-diff badge-s">S</span> stock distinto.
+  Seleccione los que desea actualizar y confirme.</span>
 </div>
 
 <div class="sel-bar">
@@ -63,29 +71,47 @@
         </th>
         <th>Código</th>
         <th>Producto</th>
-        <th class="precio-col">Precio web actual</th>
+        <th class="precio-col">Precio web</th>
         <th class="precio-col">Precio SYMA</th>
-        <th class="precio-col">Diferencia</th>
+        <th class="precio-col">Dif. precio</th>
+        <th class="stock-col">Stock web</th>
+        <th class="stock-col">Stock SYMA</th>
       </tr>
     </thead>
     <tbody>
       {% for c in cambios %}
-      <tr data-id="{{ c.id }}" data-precio="{{ c.precio_syma }}">
+      <tr data-id="{{ c.id }}" data-precio="{{ c.precio_syma }}" data-stock="{{ c.stock_syma }}">
         <td class="check-col">
           <input type="checkbox" class="chk-prod" onchange="actualizarContador()">
         </td>
-        <td style="font-family:monospace;font-size:.82rem;font-weight:600">{{ c.codigo }}</td>
-        <td style="max-width:280px">{{ c.nombre }}</td>
-        <td class="precio-col">
+        <td style="font-family:monospace;font-size:.82rem;font-weight:600">
+          {{ c.codigo }}
+          {% if c.precio_diff %}<span class="badge-diff badge-p">P</span>{% endif %}
+          {% if c.stock_diff %}<span class="badge-diff badge-s">S</span>{% endif %}
+        </td>
+        <td style="max-width:260px">{{ c.nombre }}</td>
+        <td class="precio-col {% if c.precio_diff %}diff-highlight{% endif %}">
           {% if c.precio_web > 0 %}₡{{ "{:,.0f}".format(c.precio_web) }}{% else %}<span style="color:#9ca3af">—</span>{% endif %}
         </td>
-        <td class="precio-col" style="font-weight:600">₡{{ "{:,.0f}".format(c.precio_syma) }}</td>
+        <td class="precio-col {% if c.precio_diff %}diff-highlight{% endif %}" style="font-weight:600">
+          ₡{{ "{:,.0f}".format(c.precio_syma) }}
+        </td>
         <td class="precio-col">
-          {% if c.diferencia > 0 %}
-            <span class="dif-pos">+₡{{ "{:,.0f}".format(c.diferencia) }}</span>
+          {% if c.precio_diff %}
+            {% if c.dif_precio > 0 %}
+              <span class="dif-pos">+₡{{ "{:,.0f}".format(c.dif_precio) }}</span>
+            {% else %}
+              <span class="dif-neg">-₡{{ "{:,.0f}".format(c.dif_precio | abs) }}</span>
+            {% endif %}
           {% else %}
-            <span class="dif-neg">-₡{{ "{:,.0f}".format(c.diferencia | abs) }}</span>
+            <span style="color:#9ca3af">—</span>
           {% endif %}
+        </td>
+        <td class="stock-col {% if c.stock_diff %}diff-highlight{% endif %}">
+          {{ c.stock_web }}
+        </td>
+        <td class="stock-col {% if c.stock_diff %}diff-highlight{% endif %}" style="font-weight:600">
+          {{ c.stock_syma }}
         </td>
       </tr>
       {% endfor %}
@@ -112,7 +138,11 @@ function actualizarContador() {
 async function aplicarSeleccionados() {
   const sel = [...document.querySelectorAll('.chk-prod:checked')].map(c => {
     const tr = c.closest('tr');
-    return { id: parseInt(tr.dataset.id), precio_syma: parseFloat(tr.dataset.precio) };
+    return {
+      id:          parseInt(tr.dataset.id),
+      precio_syma: parseFloat(tr.dataset.precio),
+      stock_syma:  parseInt(tr.dataset.stock)
+    };
   });
 
   if (!sel.length) return;
@@ -131,7 +161,7 @@ async function aplicarSeleccionados() {
   const msg = document.getElementById('result-msg');
   if (res.actualizados !== undefined) {
     msg.className = 'alert alert-success';
-    msg.innerHTML = `✅ <strong>${res.actualizados}</strong> precio(s) actualizados correctamente. Redirigiendo...`;
+    msg.innerHTML = `✅ <strong>${res.actualizados}</strong> producto(s) actualizados correctamente. Redirigiendo...`;
     msg.style.display = 'block';
     setTimeout(() => { window.location.href = '/admin/precios'; }, 1800);
   } else {
