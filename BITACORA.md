@@ -1,10 +1,10 @@
 # BITÁCORA TÉCNICA — Sitio Web MUNDOTEC
 **Proyecto:** Sitio web público + panel de administración
 **Stack:** FastAPI + PostgreSQL + Jinja2
-**Servidor:** Ubuntu 192.168.88.250:8001
-**Ruta local:** `/Users/lroot/Downloads/mundotec-web`
-**Ruta servidor:** `/home/lroot/mundotec-web`
-**Última actualización:** 2026-04-13
+**Servidor:** `mserver` — Ubuntu 22.04 — IP `192.168.88.250`
+**Ruta del proyecto:** `/home/lroot/mundotec-web`
+**Entorno de trabajo:** Claude Code corre directamente en el servidor
+**Última actualización:** 2026-04-14
 
 ---
 
@@ -12,9 +12,10 @@
 
 | Frase | Acción |
 |-------|--------|
-| `"lee la bitácora"` | `Read BITACORA.md` → contexto cargado |
-| `"cierra la sesión"` | Actualizar bitácora + commit + push servidor |
-| `"realiza respaldo"` | Backup del directorio y la BD PostgreSQL |
+| `"iniciamos sesión en mundotec"` | Leer esta bitácora → contexto cargado |
+| `"iniciamos sesión en reportes"` | Leer `/home/lroot/reportes-syma/BITACORA_TECNICA.md` |
+| `"cierra la sesión"` | Actualizar bitácora + commit |
+| `"hacer respaldo"` / `"realiza respaldo"` | Ejecutar `bash /home/lroot/scripts/backup_mundotec.sh` |
 
 ---
 
@@ -83,20 +84,18 @@
 
 ## PROTOCOLO DE DEPLOY
 
+> Claude Code corre **directamente en el servidor** (`mserver` / `192.168.88.250`).
+> No hay sincronización Mac↔servidor. Se edita y commitea en el servidor mismo.
+
 ```bash
-# 1. Editar archivos localmente
+# 1. Editar archivos en /home/lroot/mundotec-web/
 # 2. Commit
 git add <archivos>
-git commit -m "descripción"
+git commit -m "tipo: descripción breve"
 
-# 3. Push al servidor
-GIT_SSH_COMMAND="/usr/local/bin/sshpass -p '87060002' ssh -o StrictHostKeyChecking=no" \
-  git push servidor main
-
-# 4. Reiniciar servicio
-/usr/local/bin/sshpass -p '87060002' ssh -tt lroot@192.168.88.250 \
-  "echo '87060002' | sudo -S systemctl restart mundotec-web.service && \
-   sleep 2 && systemctl is-active mundotec-web.service"
+# 3. Reiniciar servicio (si es necesario)
+sudo systemctl restart mundotec-web.service
+sudo systemctl is-active mundotec-web.service
 ```
 
 ---
@@ -122,74 +121,96 @@ WantedBy=multi-user.target
 
 ---
 
-## SISTEMA DE RESPALDO AUTOMÁTICO
+## SISTEMA DE RESPALDO
 
-### Ubicación
-| Elemento | Ruta |
-|----------|------|
-| Script | `/home/lroot/scripts/backup_mundotec.sh` |
-| Destino | `/home/lroot/backups/` |
-| Log | `/home/lroot/backups/backup.log` |
+### Esquema de capas
 
-### Archivos generados por respaldo
-| Archivo | Contenido |
-|---------|-----------|
-| `mundotec_git_FECHA.bundle` | Historial git completo (todos los commits) |
-| `mundotec_db_FECHA.sql.gz` | Base de datos PostgreSQL completa |
-| `mundotec_uploads_FECHA.tar.gz` | Imágenes y archivos subidos |
-| `mundotec-web.git/` | Bare repo local — remoto `backup` permanente |
-| `sqlserver/Syma_FECHA.bak.gz` | BD SQL Server 2019 Syma (una vez por día, lock de fecha) |
-| `sqlserver/MundoTecAdminDb_*.bak.gz` | BD SQL Server 2012 — respaldo único, retención permanente |
-
-### Cron (automático cada noche a las 2:00 AM)
 ```
-0 2 * * * /home/lroot/scripts/backup_mundotec.sh >> /home/lroot/backups/backup.log 2>&1
+/home/lroot/mundotec-web/          ← Repo de trabajo
+        │
+        ├── git push backup main
+        │         └── /home/lroot/backups/mundotec-web.git     ← Bare repo (historial permanente)
+        │
+        └── git bundle create
+                  ├── /home/lroot/backups/mundotec_git_FECHA.bundle     ← Snapshot diario (14 días)
+                  └── /mnt/backup-ext/MUNDOTEC/backups-servidor/        ← Disco externo (si conectado)
 ```
 
-### Retención
-- Se conservan los últimos **14 días** de respaldos
-- Los más antiguos se eliminan automáticamente
+### Archivos generados
+| Archivo | Contenido | Retención |
+|---------|-----------|-----------|
+| `mundotec-web.git/` | Bare repo — historial git completo | Permanente |
+| `mundotec_git_FECHA.bundle` | Snapshot portátil del historial | 14 días |
+| `mundotec_db_FECHA.sql.gz` | Base de datos PostgreSQL completa | 14 días |
+| `mundotec_uploads_FECHA.tar.gz` | Imágenes (`static/uploads/`) | 14 días |
+| `sqlserver/Syma_FECHA.bak.gz` | BD SQL Server 2019 Syma | 14 días |
+| `sqlserver/MundoTecAdminDb_*.bak.gz` | BD SQL Server 2012 | Permanente |
+
+### Scripts
+| Script | Función | Cron |
+|--------|---------|------|
+| `backup_mundotec.sh` | Git + PostgreSQL + Imágenes + SQL Server | 02:00 AM diario |
+| `backup_reportes.sh` | Git + Static + SQL Server (si no corrió) | 02:30 AM diario |
+| `backup_sqlserver.py` | `BACKUP DATABASE [Syma]` vía pyodbc + gzip | Llamado por los anteriores |
 
 ### Disco externo
 | Campo | Valor |
 |-------|-------|
 | Punto de montaje | `/mnt/backup-ext` |
-| Carpeta respaldos | `/mnt/backup-ext/MUNDOTEC/backups-servidor/` |
+| Carpeta | `/mnt/backup-ext/MUNDOTEC/backups-servidor/` |
 | UUID | `1CFE7C05FE7BD60C` (NTFS, 932 GB) |
-| fstab | `nofail` — si no está conectado el servidor arranca igual |
+| fstab | `nofail` — servidor arranca aunque no esté conectado |
 
-> Si el disco externo está montado, los scripts copian automáticamente al final. Si no está, solo guardan localmente y registran un aviso en el log.
+> Si el disco externo está montado, los scripts copian automáticamente. Si no, solo guardan local y registran aviso en el log.
 
-### Ejecutar respaldo manual
+### Logs
+| Log | Ruta |
+|-----|------|
+| mundotec-web | `/home/lroot/backups/backup.log` |
+| reportes-syma | `/home/lroot/backups/backup_reportes.log` |
+
+---
+
+## PROTOCOLO DE RESPALDO
+
+### Respaldo manual (desde Claude Code)
 ```bash
 bash /home/lroot/scripts/backup_mundotec.sh
 ```
 
+### Verificar último respaldo
+```bash
+tail -20 /home/lroot/backups/backup.log
+```
+
+### Verificar contenido del disco externo
+```bash
+ls -lh /mnt/backup-ext/MUNDOTEC/backups-servidor/
+```
+
 ### Restaurar base de datos
 ```bash
-# Descomprimir y restaurar
 gunzip -c /home/lroot/backups/mundotec_db_FECHA.sql.gz | \
   PGPASSWORD=Mw@Web2026! psql -h localhost -U mw_user mundotec_web
 ```
 
-### Restaurar código desde bundle git
+### Restaurar código
 ```bash
-# Opción 1: Clonar desde el bare repo local
+# Desde bare repo (historial completo)
 git clone /home/lroot/backups/mundotec-web.git mundotec-web-restaurado
 
-# Opción 2: Restaurar desde bundle diario
+# Desde bundle diario (snapshot portátil)
 git clone /home/lroot/backups/mundotec_git_FECHA.bundle mundotec-web-restaurado
 ```
 
-### Ver historial de versiones del bare repo
+### Ver historial completo del bare repo
 ```bash
 git --git-dir=/home/lroot/backups/mundotec-web.git log --oneline
 ```
 
 ### Restaurar imágenes
 ```bash
-cd /home/lroot/mundotec-web/static
-tar -xzf /home/lroot/backups/mundotec_uploads_FECHA.tar.gz
+tar -xzf /home/lroot/backups/mundotec_uploads_FECHA.tar.gz -C /home/lroot/mundotec-web/static/
 ```
 
 ---
