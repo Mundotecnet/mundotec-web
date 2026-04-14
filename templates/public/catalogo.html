@@ -22,7 +22,7 @@
 
 .cat-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:1.5rem; padding:2.5rem 5%; }
 
-.prod-card { background:#fff; border-radius:12px; box-shadow:0 2px 12px rgba(0,0,0,.08); overflow:hidden; transition:.2s; display:flex; flex-direction:column; }
+.prod-card { background:#fff; border-radius:12px; box-shadow:0 2px 12px rgba(0,0,0,.08); overflow:hidden; transition:.2s; display:flex; flex-direction:column; text-decoration:none; color:inherit; cursor:pointer; }
 .prod-card:hover { transform:translateY(-4px); box-shadow:0 8px 28px rgba(0,0,0,.13); }
 .prod-img  { aspect-ratio:3/2; background:#fff; border-bottom:1px solid #f0f0f0; display:flex; align-items:center; justify-content:center; font-size:3rem; overflow:hidden; }
 .prod-img img { width:100%; height:100%; object-fit:contain; }
@@ -82,7 +82,7 @@
 {% if productos %}
 <div class="cat-grid">
   {% for p in productos %}
-  <div class="prod-card">
+  <a href="/catalogo/{{ p.id }}" class="prod-card">
     <div class="prod-img">
       {% if p.imagen_principal %}
         <img src="{{ p.imagen_principal }}" alt="{{ p.nombre }}">
@@ -125,15 +125,15 @@
         </div>
         {% endif %}
         <div style="display:flex;gap:.5rem">
-          <a href="/catalogo/{{ p.id }}" style="flex:1;text-align:center;background:var(--primary);color:#fff;padding:7px 10px;border-radius:6px;font-size:.8rem;font-weight:600">Ver detalle</a>
-          <button onclick="agregarAlCarrito({{ p.id }},'{{ p.codigo }}','{{ p.nombre | replace("'", "\\'") }}',{{ precio_base or 0 }},'{{ p.imagen_principal or '' }}')"
+          <span style="flex:1;text-align:center;background:var(--primary);color:#fff;padding:7px 10px;border-radius:6px;font-size:.8rem;font-weight:600">Ver detalle</span>
+          <button onclick="event.preventDefault();event.stopPropagation();agregarAlCarrito({{ p.id }},'{{ p.codigo }}','{{ p.nombre | replace("'", "\\'") }}',{{ precio_base or 0 }},'{{ p.imagen_principal or '' }}')"
                   style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:7px 10px;cursor:pointer;font-size:.8rem;font-weight:600">
             🛒
           </button>
         </div>
       </div>
     </div>
-  </div>
+  </a>
   {% endfor %}
 </div>
 {% else %}
