@@ -56,7 +56,7 @@
 
 <!-- Filtros -->
 <div class="filtros-bar">
-  <form method="get" action="/catalogo">
+  <form method="get" action="/catalogo" id="form-catalogo">
     <input type="text" name="busqueda" class="search-input" placeholder="🔍 Buscar producto..." value="{{ busqueda }}">
     <select name="categoria">
       <option value="">Todas las categorías</option>
@@ -64,32 +64,65 @@
       <option value="{{ c }}" {{ 'selected' if c == categoria_sel }}>{{ c }}</option>
       {% endfor %}
     </select>
+    <input type="hidden" name="subcategoria" value="{{ subcategoria_sel }}">
+    <input type="number" name="precio_min" placeholder="Precio mín" min="0" value="{{ precio_min if precio_min else '' }}"
+           style="width:110px;padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:.85rem">
+    <input type="number" name="precio_max" placeholder="Precio máx" min="0" value="{{ precio_max if precio_max else '' }}"
+           style="width:110px;padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:.85rem">
+    <select name="orden_precio" onchange="document.getElementById('form-catalogo').submit()"
+            style="padding:8px 10px;border:1px solid #ddd;border-radius:6px;font-size:.85rem">
+      <option value="" {{ 'selected' if not orden_precio }}>Ordenar por</option>
+      <option value="asc"  {{ 'selected' if orden_precio == 'asc'  }}>Precio: menor a mayor</option>
+      <option value="desc" {{ 'selected' if orden_precio == 'desc' }}>Precio: mayor a menor</option>
+    </select>
     <button type="submit">Buscar</button>
-    {% if busqueda or categoria_sel or subcategoria_sel %}
+    {% if busqueda or categoria_sel or subcategoria_sel or precio_min or precio_max or orden_precio %}
     <a href="/catalogo" style="color:var(--gray);font-size:.85rem;padding:8px">✕ Limpiar</a>
     {% endif %}
   </form>
+  {% if precio_min or precio_max %}
+  <div style="margin-top:.5rem;display:flex;gap:.5rem;flex-wrap:wrap">
+    <span style="font-size:.78rem;color:var(--gray)">Presets:</span>
+    <a href="?{{ ('categoria='+categoria_sel+'&') if categoria_sel }}{{ ('subcategoria='+subcategoria_sel+'&') if subcategoria_sel }}precio_max=50000{{ ('&orden_precio='+orden_precio) if orden_precio }}"
+       style="font-size:.78rem;padding:3px 10px;border:1px solid #ddd;border-radius:20px;color:var(--primary)">Hasta ₡50K</a>
+    <a href="?{{ ('categoria='+categoria_sel+'&') if categoria_sel }}{{ ('subcategoria='+subcategoria_sel+'&') if subcategoria_sel }}precio_max=100000{{ ('&orden_precio='+orden_precio) if orden_precio }}"
+       style="font-size:.78rem;padding:3px 10px;border:1px solid #ddd;border-radius:20px;color:var(--primary)">Hasta ₡100K</a>
+    <a href="?{{ ('categoria='+categoria_sel+'&') if categoria_sel }}{{ ('subcategoria='+subcategoria_sel+'&') if subcategoria_sel }}precio_max=500000{{ ('&orden_precio='+orden_precio) if orden_precio }}"
+       style="font-size:.78rem;padding:3px 10px;border:1px solid #ddd;border-radius:20px;color:var(--primary)">Hasta ₡500K</a>
+  </div>
+  {% else %}
+  <div style="margin-top:.5rem;display:flex;gap:.5rem;flex-wrap:wrap">
+    <span style="font-size:.78rem;color:var(--gray)">Precio rápido:</span>
+    <a href="?{{ ('categoria='+categoria_sel+'&') if categoria_sel }}{{ ('subcategoria='+subcategoria_sel+'&') if subcategoria_sel }}precio_max=50000{{ ('&orden_precio='+orden_precio) if orden_precio }}"
+       style="font-size:.78rem;padding:3px 10px;border:1px solid #ddd;border-radius:20px;color:var(--primary)">Hasta ₡50K</a>
+    <a href="?{{ ('categoria='+categoria_sel+'&') if categoria_sel }}{{ ('subcategoria='+subcategoria_sel+'&') if subcategoria_sel }}precio_max=100000{{ ('&orden_precio='+orden_precio) if orden_precio }}"
+       style="font-size:.78rem;padding:3px 10px;border:1px solid #ddd;border-radius:20px;color:var(--primary)">Hasta ₡100K</a>
+    <a href="?{{ ('categoria='+categoria_sel+'&') if categoria_sel }}{{ ('subcategoria='+subcategoria_sel+'&') if subcategoria_sel }}precio_max=500000{{ ('&orden_precio='+orden_precio) if orden_precio }}"
+       style="font-size:.78rem;padding:3px 10px;border:1px solid #ddd;border-radius:20px;color:var(--primary)">Hasta ₡500K</a>
+  </div>
+  {% endif %}
 </div>
 
 <!-- Chips de categorías y subcategorías -->
+{% set extra = ('&precio_min='+precio_min|string if precio_min) + ('&precio_max='+precio_max|string if precio_max) + ('&orden_precio='+orden_precio if orden_precio) %}
 {% if categorias %}
 <div class="chips">
   {% if not categoria_sel %}
-    <a href="/catalogo" class="chip activo">Todos</a>
+    <a href="/catalogo{{ ('?'+extra[1:]) if extra }}" class="chip activo">Todos</a>
     {% for c in categorias %}
-      <a href="/catalogo?categoria={{ c }}" class="chip">{{ c }}</a>
+      <a href="/catalogo?categoria={{ c }}{{ extra }}" class="chip">{{ c }}</a>
     {% endfor %}
   {% else %}
-    <a href="/catalogo" class="chip back">← Todas</a>
+    <a href="/catalogo{{ ('?'+extra[1:]) if extra }}" class="chip back">← Todas</a>
     <div class="chip-sep"></div>
-    <a href="/catalogo?categoria={{ categoria_sel }}"
+    <a href="/catalogo?categoria={{ categoria_sel }}{{ extra }}"
        class="chip {{ 'activo' if not subcategoria_sel }}">
       {{ categoria_sel }}
     </a>
     {% if subcategorias.get(categoria_sel) %}
       <div class="chip-sep"></div>
       {% for s in subcategorias[categoria_sel] %}
-      <a href="/catalogo?categoria={{ categoria_sel }}&subcategoria={{ s }}"
+      <a href="/catalogo?categoria={{ categoria_sel }}&subcategoria={{ s }}{{ extra }}"
          class="chip {{ 'activo' if s == subcategoria_sel }}">
         {{ s }}
       </a>

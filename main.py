@@ -106,15 +106,21 @@ async def home(request: Request):
 async def catalogo_pub(request: Request,
                        categoria:    str = Query(""),
                        subcategoria: str = Query(""),
-                       busqueda:     str = Query("")):
+                       busqueda:     str = Query(""),
+                       precio_min:   int = Query(0),
+                       precio_max:   int = Query(0),
+                       orden_precio: str = Query("")):
     cfg       = get_config()
-    productos = get_catalogo_publico(categoria=categoria, subcategoria=subcategoria, busqueda=busqueda)
+    productos = get_catalogo_publico(categoria=categoria, subcategoria=subcategoria,
+                                     busqueda=busqueda, precio_min=precio_min,
+                                     precio_max=precio_max, orden_precio=orden_precio)
     cats      = get_categorias_publico()
     subcats   = get_subcategorias_publico()
     return templates.TemplateResponse("public/catalogo.html", {
         "request": request, "cfg": cfg,
         "productos": productos, "categorias": cats, "subcategorias": subcats,
         "categoria_sel": categoria, "subcategoria_sel": subcategoria, "busqueda": busqueda,
+        "precio_min": precio_min, "precio_max": precio_max, "orden_precio": orden_precio,
         "pagina": "catalogo"
     })
 

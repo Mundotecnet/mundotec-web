@@ -12,7 +12,8 @@ def get_hero_productos() -> list:
         LIMIT 8
     """)
 
-def get_catalogo_publico(categoria="", subcategoria="", busqueda="", destacado=False) -> list:
+def get_catalogo_publico(categoria="", subcategoria="", busqueda="", destacado=False,
+                         precio_min=0, precio_max=0, orden_precio="") -> list:
     filtros = ["p.activo = TRUE"]
     params  = []
     if destacado:
@@ -24,7 +25,17 @@ def get_catalogo_publico(categoria="", subcategoria="", busqueda="", destacado=F
     if busqueda:
         filtros.append("(p.nombre ILIKE %s OR p.descripcion_web ILIKE %s)")
         params += [f"%{busqueda}%", f"%{busqueda}%"]
+    if precio_min and precio_min > 0:
+        filtros.append("COALESCE(o.precio_oferta, p.precio_ref) >= %s"); params.append(precio_min)
+    if precio_max and precio_max > 0:
+        filtros.append("COALESCE(o.precio_oferta, p.precio_ref) <= %s"); params.append(precio_max)
     where = "WHERE " + " AND ".join(filtros)
+    if orden_precio == "asc":
+        order = "ORDER BY COALESCE(o.precio_oferta, p.precio_ref) ASC NULLS LAST"
+    elif orden_precio == "desc":
+        order = "ORDER BY COALESCE(o.precio_oferta, p.precio_ref) DESC NULLS LAST"
+    else:
+        order = "ORDER BY p.orden, p.nombre"
     return query(f"""
         SELECT p.*,
                i.url_path  AS imagen_principal,
@@ -41,7 +52,7 @@ def get_catalogo_publico(categoria="", subcategoria="", busqueda="", destacado=F
                            AND o.fecha_inicio <= NOW()
                            AND o.fecha_fin    >= NOW()
         {where}
-        ORDER BY p.orden, p.nombre
+        {order}
     """, params)
 
 
