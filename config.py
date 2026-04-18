@@ -1,5 +1,15 @@
 import os
 
+# Cargar .env local si existe (no requiere dependencias externas)
+_env_path = os.path.join(os.path.dirname(__file__), ".env")
+if os.path.exists(_env_path):
+    with open(_env_path) as _f:
+        for _line in _f:
+            _line = _line.strip()
+            if _line and not _line.startswith("#") and "=" in _line:
+                _k, _v = _line.split("=", 1)
+                os.environ.setdefault(_k.strip(), _v.strip())
+
 # ── PostgreSQL ────────────────────────────────────────────────────────────────
 PG_HOST     = os.getenv("PG_HOST",     "localhost")
 PG_PORT     = int(os.getenv("PG_PORT", "5432"))
@@ -40,5 +50,5 @@ UPLOAD_PRODUCTOS  = os.path.join(BASE_DIR, "static", "uploads", "productos")
 UPLOAD_PROYECTOS  = os.path.join(BASE_DIR, "static", "uploads", "proyectos")
 
 # ── Google OAuth ──────────────────────────────────────────────────────────────
-GOOGLE_CLIENT_ID     = 'GOOGLE_CLIENT_ID_PLACEHOLDER'
-GOOGLE_CLIENT_SECRET = 'GOOGLE_CLIENT_SECRET_PLACEHOLDER'
+GOOGLE_CLIENT_ID     = os.getenv("GOOGLE_CLIENT_ID",     "")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
