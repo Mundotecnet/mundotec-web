@@ -4,7 +4,7 @@
 **Servidor:** `mserver` — Ubuntu 22.04 — IP `192.168.88.250`
 **Ruta del proyecto:** `/home/lroot/mundotec-web`
 **Entorno de trabajo:** Claude Code corre directamente en el servidor
-**Última actualización:** 2026-04-14
+**Última actualización:** 2026-04-20
 
 ---
 
@@ -288,6 +288,14 @@ server {
 ---
 
 ## BITÁCORA DE CAMBIOS
+
+### [SESIÓN 11] — 2026-04-20 — Fix catálogo público
+
+| # | Tipo | Descripción |
+|---|------|-------------|
+| 1 | Fix | `templates/public/catalogo.html` — variable `extra` concatenaba `Undefined` en Jinja2 cuando ningún filtro de precio estaba activo (`if x` sin `else ''`), causando Internal Server Error en `/catalogo` |
+
+---
 
 ### [SESIÓN 10] — 2026-04-13 — Módulo actualizar precios + sincronización git
 
