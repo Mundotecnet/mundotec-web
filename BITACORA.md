@@ -16,6 +16,7 @@
 | `"iniciamos sesión en reportes"` | Leer `/home/lroot/reportes-syma/BITACORA_TECNICA.md` |
 | `"cierra la sesión"` | Actualizar bitácora + commit |
 | `"hacer respaldo"` / `"realiza respaldo"` | Ejecutar `bash /home/lroot/scripts/backup_mundotec.sh` |
+| `"lamb"` | Ejecutar `bash /home/lroot/scripts/generar_documentos.sh` — regenera ambos PDFs y los copia al disco externo |
 
 ---
 
