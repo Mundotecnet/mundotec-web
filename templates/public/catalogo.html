@@ -104,7 +104,7 @@
 </div>
 
 <!-- Chips de categorías y subcategorías -->
-{% set extra = ('&precio_min='+precio_min|string if precio_min) + ('&precio_max='+precio_max|string if precio_max) + ('&orden_precio='+orden_precio if orden_precio) %}
+{% set extra = ('&precio_min='+precio_min|string if precio_min else '') + ('&precio_max='+precio_max|string if precio_max else '') + ('&orden_precio='+orden_precio if orden_precio else '') %}
 {% if categorias %}
 <div class="chips">
   {% if not categoria_sel %}
